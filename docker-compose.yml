@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  jjinfit:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: jjinfit-ai-dashboard
+    restart: always
+    ports:
+      - "8000:8000"
+    volumes:
+      # Preserve SQLite database across container restarts
+      - jjinfit_data:/app/backend/data
+    environment:
+      - ENV=production
+      - SECRET_KEY=jjinfit-secure-super-secret-key-prod
+      - DATABASE_URL=sqlite+aiosqlite:///./data/health.db
+      - FRONTEND_URL=http://localhost:8000
+      # OAuth IDs can be injected directly here or via an `.env` file!
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - NAVER_CLIENT_ID=${NAVER_CLIENT_ID:-}
+      - KAKAO_CLIENT_ID=${KAKAO_CLIENT_ID:-}
+      - LINE_CLIENT_ID=${LINE_CLIENT_ID:-}
+
+volumes:
+  jjinfit_data:
+    driver: local

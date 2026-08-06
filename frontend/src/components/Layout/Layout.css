@@ -1,0 +1,219 @@
+.app-layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-6);
+  height: var(--header-height);
+  border-radius: 0;
+  border-top: none;
+  border-left: none;
+  border-right: none;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+}
+
+.header-logo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-lg);
+  font-weight: var(--font-bold);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+}
+
+.header-logo:hover {
+  background: var(--bg-input);
+}
+
+.header-nav {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.nav-btn {
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--text-secondary);
+  transition: all var(--transition-fast);
+}
+
+.nav-btn:hover {
+  background: var(--bg-input);
+  color: var(--text-primary);
+}
+
+.nav-btn.active {
+  background: rgba(0, 188, 212, 0.1);
+  color: var(--color-primary-400);
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.theme-toggle-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-lg);
+  transition: all var(--transition-fast);
+}
+
+.theme-toggle-btn:hover {
+  background: var(--bg-input);
+  transform: rotate(20deg);
+}
+
+.user-menu {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  border: 2px solid var(--border-secondary);
+}
+
+.user-name {
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--text-secondary);
+}
+
+.logout-btn {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.logout-btn:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--color-danger);
+}
+
+.app-content {
+  flex: 1;
+  padding: var(--space-6);
+  max-width: var(--content-max-width);
+  width: 100%;
+  margin: 0 auto;
+}
+
+@media (min-width: 769px) {
+  .mobile-bottom-nav {
+    display: none !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .app-header {
+    padding: var(--space-2) var(--space-4);
+    height: 58px;
+  }
+
+  /* Hide top desktop navigation on smartphone screen */
+  .header-nav {
+    display: none !important;
+  }
+
+  /* Keep the 찐fit brand name visible on smartphone header */
+  .header-logo span {
+    display: inline !important;
+    font-size: 18px !important;
+  }
+
+  .user-name {
+    display: none;
+  }
+
+  /* Add extra padding so mobile content is never hidden behind bottom dock */
+  .app-content {
+    padding: var(--space-3) var(--space-3) 90px !important;
+  }
+
+  /* Smartphone Bottom App Navigation Bar (PWA Dock) */
+  .mobile-bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 68px;
+    background: rgba(15, 23, 42, 0.92);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-top: 1px solid var(--border-secondary);
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    z-index: 1000;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.35);
+    padding-bottom: 4px; /* for safe area in iOS iPhone */
+  }
+
+  .bottom-tab-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    padding: 6px 4px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: all 0.15s ease;
+    border-radius: var(--radius-sm);
+  }
+
+  .bottom-tab-btn .tab-icon {
+    font-size: 22px;
+    margin-bottom: 2px;
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .bottom-tab-btn .tab-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+  }
+
+  .bottom-tab-btn:hover {
+    color: var(--text-primary);
+  }
+
+  .bottom-tab-btn.active {
+    color: #2dd4a8;
+  }
+
+  .bottom-tab-btn.active .tab-icon {
+    transform: scale(1.22) translateY(-2px);
+    filter: drop-shadow(0 0 8px rgba(45, 212, 168, 0.6));
+  }
+}
+
