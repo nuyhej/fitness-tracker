@@ -30,11 +30,16 @@ async def get_db():
 
 
 async def init_db():
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-        try:
-            from sqlalchemy import text
-            await conn.execute(text("ALTER TABLE users ADD COLUMN hashed_password VARCHAR(255);"))
-        except Exception:
-            pass  # Column already exists in sqlite schema
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+            try:
+                from sqlalchemy import text
+                await conn.execute(text("ALTER TABLE users ADD COLUMN hashed_password VARCHAR(255);"))
+            except Exception:
+                pass  # Column already exists in sqlite schema
+    except Exception as e:
+        import logging
+        logging.warning(f"Database table check/init handled concurrently or existed: {e}")
+
 
