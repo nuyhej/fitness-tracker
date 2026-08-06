@@ -24,19 +24,14 @@ FROM python:3.11-slim AS production
 
 WORKDIR /app
 
-# Install basic OS libraries if required by uvicorn/asyncio
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy requirements and install Python packages
+# Copy requirements and install Python packages directly via lightweight pre-built wheels
 COPY backend/requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
-RUN pip install --no-cache-dir aiosqlite uvicorn
+RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir -r requirements.txt
 
 # Copy backend codebase
 COPY backend ./backend
 WORKDIR /app/backend
+
 
 # Copy compiled frontend build into static folder
 COPY --from=frontend-builder /app/frontend/dist /app/backend/static
