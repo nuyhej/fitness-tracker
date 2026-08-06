@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import AiInsightCard from '../../components/Dashboard/AiInsightCard';
 import BodyCompChart from '../../components/Charts/BodyCompChart';
 import { useNavigate } from 'react-router-dom';
@@ -25,6 +25,19 @@ export default function OverviewPage() {
   const [inbodyToken, setInbodyToken] = useState('');
   const [samsungText, setSamsungText] = useState('');
   const [isSamsungSyncing, setIsSamsungSyncing] = useState(false);
+  const [googleConnected, setGoogleConnected] = useState(false);
+  const [showTokenReset, setShowTokenReset] = useState(false);
+
+  useEffect(() => {
+    if (showInbodyModal) {
+      api.get<{ connected: boolean; token_type: string | null }>('/inbody/google-status')
+        .then(res => {
+          setGoogleConnected(res.connected);
+          if (res.connected) setShowTokenReset(false);
+        })
+        .catch(err => console.error('Google status fetch error:', err));
+    }
+  }, [showInbodyModal]);
 
   const handleSamsungHealthSync = async (rawData: string) => {
     try {
@@ -305,56 +318,103 @@ export default function OverviewPage() {
             </div>
 
             {inbodyTab === 'google' && (
-              <div style={{
-                padding: '16px', borderRadius: '12px', background: 'rgba(16, 185, 129, 0.12)',
-                border: '1px solid #10B981', display: 'flex', flexDirection: 'column', gap: '12px',
-                animation: 'fadeIn 0.2s ease'
-              }}>
-                <div style={{ fontWeight: 800, color: '#10B981', fontSize: '15px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span>🔥 30초 초간편 실가동 수령 가이드</span>
-                  <a 
-                    href="https://developers.google.com/oauthplayground/?step=1&scopes=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Ffitness.body.read" 
-                    target="_blank" 
-                    rel="noreferrer"
-                    style={{ 
-                      fontSize: '12px', color: '#fff', background: '#10B981', 
-                      padding: '6px 10px', borderRadius: '6px', textDecoration: 'none', fontWeight: 800,
-                      boxShadow: '0 2px 8px rgba(16, 185, 129, 0.4)'
-                    }}
-                  >
-                    🔗 토큰 발급소 열기 &gt;
-                  </a>
-                </div>
-                <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-primary)', lineHeight: 1.6 }}>
-                  1. 위 초록색 <strong>[🔗 토큰 발급소 열기 &gt;]</strong> 버튼을 클릭해 새 창을 여세요.<br />
-                  2. 왼쪽에 뜬 파란색 <strong>[Authorize APIs]</strong> 버튼을 누르고 본인 구글 계정으로 동의를 완료합니다.<br />
-                  3. 이어서 <strong>[Exchange authorization code for tokens]</strong> 버튼을 딱 1번 누르세요.<br />
-                  4. 생성된 <strong>Access token</strong> 칸의 문자열(<code>ya29...</code>)을 복사해서 아래 입력칸에 넣고 수신을 누르면 <strong>진짜 내 인바디 골격근 수치가 0.05초 만에 흡입</strong>됩니다!
-                </p>
-                <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
-                  <input
-                    type="text"
-                    placeholder="ya29.a0... (복사한 Access token 붙여넣기)"
-                    value={inbodyToken}
-                    onChange={e => setInbodyToken(e.target.value)}
-                    style={{
-                      flex: 1, padding: '11px 14px', borderRadius: '8px', border: '2px solid #10B981',
-                      background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '13.5px', fontWeight: 700
-                    }}
-                  />
+              googleConnected && !showTokenReset ? (
+                <div style={{
+                  padding: '22px', borderRadius: '14px', background: 'rgba(16, 185, 129, 0.15)',
+                  border: '2px solid #10B981', display: 'flex', flexDirection: 'column', gap: '14px',
+                  animation: 'fadeIn 0.2s ease'
+                }}>
+                  <div style={{ fontWeight: 800, color: '#10B981', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '20px' }}>🟢</span> 구글 헬스 커넥트 (InBody) 마스터 토큰 연동 중!
+                  </div>
+                  <p style={{ margin: 0, fontSize: '13.5px', color: 'var(--text-primary)', lineHeight: 1.6 }}>
+                    회원님이 최초 1회 승인해 두신 <strong>구글 피트니스 OAuth 토큰(Refresh Token)</strong>이 안전하게 영구 보존되고 있습니다! 더 이상 귀찮게 코드를 복사하거나 받으실 필요가 없습니다.<br /><br />
+                    ⚡ <strong>3시간마다 무인 자율 동기화</strong>가 동작하며, 아래 버튼을 누르시면 <strong>지금 즉시 실측 체성분 수치를 자율 수신</strong>합니다!
+                  </p>
                   <button
-                    onClick={() => handleInbodySync(inbodyToken)}
-                    disabled={!inbodyToken.trim() || isInbodySyncing}
+                    onClick={() => handleInbodySync()}
+                    disabled={isInbodySyncing}
                     style={{
-                      padding: '11px 18px', borderRadius: '8px', background: '#10B981', color: '#fff',
-                      fontWeight: 800, border: 'none', cursor: 'pointer', fontSize: '14px', whiteSpace: 'nowrap',
-                      boxShadow: '0 4px 12px rgba(16, 185, 129, 0.4)'
+                      padding: '14px 20px', borderRadius: '10px', background: 'linear-gradient(135deg, #10B981, #059669)', color: '#fff',
+                      fontWeight: 800, border: 'none', cursor: 'pointer', fontSize: '15px',
+                      boxShadow: '0 4px 14px rgba(16, 185, 129, 0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
                     }}
                   >
-                    {isInbodySyncing ? '📡 수신 중...' : '🚀 실측 체성분 즉시 수신!'}
+                    {isInbodySyncing ? '📡 실측 데이터 자율 수신 중...' : '🚀 토큰 재입력 없이 지금 즉시 자동 동기화!'}
                   </button>
+                  <div style={{ textAlign: 'right', marginTop: '2px' }}>
+                    <button
+                      type="button"
+                      onClick={() => setShowTokenReset(true)}
+                      style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: '12px', textDecoration: 'underline', cursor: 'pointer', padding: 0 }}
+                    >
+                      🔑 다른 계정이나 토큰으로 변경 / 재입력하기 &gt;
+                    </button>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div style={{
+                  padding: '16px', borderRadius: '12px', background: 'rgba(16, 185, 129, 0.12)',
+                  border: '1px solid #10B981', display: 'flex', flexDirection: 'column', gap: '12px',
+                  animation: 'fadeIn 0.2s ease'
+                }}>
+                  <div style={{ fontWeight: 800, color: '#10B981', fontSize: '15px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span>🔥 30초 초간편 실가동 수령 가이드 (최초 1회만!)</span>
+                    <a 
+                      href="https://developers.google.com/oauthplayground/?step=1&scopes=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Ffitness.body.read" 
+                      target="_blank" 
+                      rel="noreferrer"
+                      style={{ 
+                        fontSize: '12px', color: '#fff', background: '#10B981', 
+                        padding: '6px 10px', borderRadius: '6px', textDecoration: 'none', fontWeight: 800,
+                        boxShadow: '0 2px 8px rgba(16, 185, 129, 0.4)'
+                      }}
+                    >
+                      🔗 토큰 발급소 열기 &gt;
+                    </a>
+                  </div>
+                  <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-primary)', lineHeight: 1.6 }}>
+                    1. 위 초록색 <strong>[🔗 토큰 발급소 열기 &gt;]</strong> 버튼을 클릭해 새 창을 여세요.<br />
+                    2. 왼쪽에 뜬 파란색 <strong>[Authorize APIs]</strong> 버튼을 누르고 본인 구글 계정으로 동의를 완료합니다.<br />
+                    3. 이어서 <strong>[Exchange authorization code for tokens]</strong> 버튼을 딱 1번 누르세요.<br />
+                    4. 생성된 <strong>Access token</strong>(<code>ya29...</code>) 또는 평생 자동 수신을 위한 <strong>Refresh token</strong>(<code>1//...</code>)을 복사해 넣으시면 <strong>이후로는 평생 재입력 없이 무인 동기화</strong>됩니다!
+                  </p>
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
+                    <input
+                      type="text"
+                      placeholder="ya29.a0... 또는 1//... (복사한 토큰 붙여넣기)"
+                      value={inbodyToken}
+                      onChange={e => setInbodyToken(e.target.value)}
+                      style={{
+                        flex: 1, padding: '11px 14px', borderRadius: '8px', border: '2px solid #10B981',
+                        background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '13.5px', fontWeight: 700
+                      }}
+                    />
+                    <button
+                      onClick={() => handleInbodySync(inbodyToken)}
+                      disabled={!inbodyToken.trim() || isInbodySyncing}
+                      style={{
+                        padding: '11px 18px', borderRadius: '8px', background: '#10B981', color: '#fff',
+                        fontWeight: 800, border: 'none', cursor: 'pointer', fontSize: '14px', whiteSpace: 'nowrap',
+                        boxShadow: '0 4px 12px rgba(16, 185, 129, 0.4)'
+                      }}
+                    >
+                      {isInbodySyncing ? '📡 수신 및 저장 중...' : '🚀 토큰 영구 저장 및 수신!'}
+                    </button>
+                  </div>
+                  {googleConnected && (
+                    <div style={{ textAlign: 'center', marginTop: '2px' }}>
+                      <button
+                        type="button"
+                        onClick={() => setShowTokenReset(false)}
+                        style={{ background: 'none', border: 'none', color: '#10B981', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}
+                      >
+                        ← 기존 자동 연동 모드로 돌아가기
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )
             )}
 
             {inbodyTab === 'samsung' && (
