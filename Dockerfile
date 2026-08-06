@@ -7,7 +7,9 @@ WORKDIR /app/frontend
 
 # Copy frontend package definitions and install
 COPY frontend/package*.json ./
+ENV NODE_ENV=development
 RUN npm install --legacy-peer-deps
+
 
 # Copy frontend source and build production static bundle
 COPY frontend ./
