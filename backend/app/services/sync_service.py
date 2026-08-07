@@ -139,7 +139,7 @@ async def sync_user_health_data(user: User, db: AsyncSession, access_token: str 
             if w_resp.status_code == 401 or f_resp.status_code == 401:
                 return {
                     "status": "expired",
-                    "message": "🔒 구글 헬스 커넥트 접근 토큰이 만료되었습니다. 로그아웃 후 구글 소셜 로그인 버튼으로 1회 다시 입장하시면 라이브 동기화가 재동작합니다.",
+                    "message": "🔒 구글 헬스 커넥트 연동 토큰이 만료되었거나 권한이 없습니다. 토큰 재입력 화면에서 [🔗 토큰 발급소]를 열어 새 토큰(ya29...)을 발급받아 입력해주세요!",
                     "synced_days": 0,
                     "new_records": 0,
                     "source": "Google Health Connect (Live API)"
