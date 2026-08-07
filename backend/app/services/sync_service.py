@@ -161,35 +161,45 @@ async def sync_user_health_data(user: User, db: AsyncSession, access_token: str 
                 if real_weight <= 0:
                     continue
                 
-                record_dt = datetime.datetime.fromtimestamp(nano_time / 1e9, tz=datetime.timezone.utc)
-                start_of_day = datetime.datetime.combine(record_dt.date(), datetime.time.min, tzinfo=datetime.timezone.utc)
-                end_of_day = datetime.datetime.combine(record_dt.date(), datetime.time.max, tzinfo=datetime.timezone.utc)
+                KST = datetime.timezone(datetime.timedelta(hours=9))
+                record_dt_kst = datetime.datetime.fromtimestamp(nano_time / 1e9, tz=KST)
+                
+                # Convert KST day boundaries to UTC for DB querying
+                start_of_day_kst = datetime.datetime.combine(record_dt_kst.date(), datetime.time.min, tzinfo=KST)
+                end_of_day_kst = datetime.datetime.combine(record_dt_kst.date(), datetime.time.max, tzinfo=KST)
+                
+                start_of_day_utc = start_of_day_kst.astimezone(datetime.timezone.utc)
+                end_of_day_utc = end_of_day_kst.astimezone(datetime.timezone.utc)
 
-                # Match fat percentage from same day or approximate
+                # Match fat percentage from the same KST day
                 real_fat_pct = None
                 for f_nanos, f_val in fat_points.items():
-                    f_dt = datetime.datetime.fromtimestamp(int(f_nanos) / 1e9, tz=datetime.timezone.utc)
-                    if f_dt.date() == record_dt.date() and f_val is not None:
+                    f_dt_kst = datetime.datetime.fromtimestamp(int(f_nanos) / 1e9, tz=KST)
+                    if f_dt_kst.date() == record_dt_kst.date() and f_val is not None:
                         real_fat_pct = round(float(f_val), 1)
                         break
 
                 real_fat_mass = round(real_weight * (real_fat_pct / 100.0), 1) if real_fat_pct else 0.0
-                # Clinical approximation for lean skeletal muscle if direct segment not exported
-                real_muscle = round((real_weight - real_fat_mass) * 0.52, 1) if real_fat_pct else round(real_weight * 0.45, 1)
+                # Google Fit API inherently drops skeletal muscle mass. We will NO LONGER approximate it.
+                real_muscle = None
 
                 # Upsert into database
                 res = await db.execute(
                     select(InBodyRecord).where(
                         and_(
                             InBodyRecord.user_id == user.id,
-                            InBodyRecord.measured_at >= start_of_day,
-                            InBodyRecord.measured_at <= end_of_day
+                            InBodyRecord.measured_at >= start_of_day_utc.replace(tzinfo=None),
+                            InBodyRecord.measured_at <= end_of_day_utc.replace(tzinfo=None)
                         )
                     )
                 )
                 existing = res.scalar_one_or_none()
 
                 if existing:
+                    # PRIORITY SHIELD: Never let Google Fit's approximations overwrite Samsung Health's raw 100% pure data
+                    if existing.source == "samsung_health":
+                        continue
+                        
                     existing.weight = real_weight
                     if real_fat_pct:
                         existing.body_fat_pct = real_fat_pct
@@ -197,9 +207,10 @@ async def sync_user_health_data(user: User, db: AsyncSession, access_token: str 
                         existing.skeletal_muscle = real_muscle
                     existing.source = "google_health"
                 else:
+                    record_dt_utc = datetime.datetime.fromtimestamp(nano_time / 1e9, tz=datetime.timezone.utc)
                     new_rec = InBodyRecord(
                         user_id=user.id,
-                        measured_at=record_dt,
+                        measured_at=record_dt_utc.replace(tzinfo=None),
                         weight=real_weight,
                         skeletal_muscle=real_muscle,
                         body_fat_mass=real_fat_mass,
