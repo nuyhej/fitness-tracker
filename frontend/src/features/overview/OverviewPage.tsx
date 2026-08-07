@@ -142,6 +142,7 @@ export default function OverviewPage() {
       }
 
       if (res.status !== 'success') {
+        if (res.status === 'expired') setShowTokenReset(true);
         setSyncMsg(res.message || '⚠️ [인바디 연동 알림] 삼성헬스/Google Fit 실시간 접속을 위해 권한 토큰 입력이 선행되어야 합니다.');
         setTimeout(() => setSyncMsg(null), 8000);
         return;
