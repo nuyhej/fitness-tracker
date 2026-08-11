@@ -12,22 +12,14 @@ from app.models.user import User
 from app.models.inbody import InBodyRecord
 
 
-def get_inbody_token_path(user_id: int) -> str:
-    token_dir = os.path.join(os.getcwd(), "data", "inbody_tokens")
-    os.makedirs(token_dir, exist_ok=True)
-    return os.path.join(token_dir, f"user_{user_id}.json")
-
-
-def save_inbody_token_cache(user_id: int, token_str: str, token_type: str = "access_token", refresh_token: str | None = None):
-    path = get_inbody_token_path(user_id)
+async def save_inbody_token_cache(user: User, db: AsyncSession, token_str: str, token_type: str = "access_token", refresh_token: str | None = None):
     existing = {}
-    if os.path.exists(path):
+    if user.google_token_json:
         try:
-            with open(path, "r", encoding="utf-8") as f:
-                existing = json.load(f)
+            existing = json.loads(user.google_token_json)
         except Exception:
             pass
-    
+            
     # If passed token starts with 1// it is explicitly a Google OAuth refresh token
     if token_str.startswith("1//"):
         existing["refresh_token"] = token_str
@@ -42,11 +34,11 @@ def save_inbody_token_cache(user_id: int, token_str: str, token_type: str = "acc
         existing["token_type"] = "refresh_token"
         
     existing["updated_at"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
-    try:
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(existing, f, ensure_ascii=False, indent=2)
-    except Exception as e:
-        print(f"[Token Save Error] Could not write to {path}: {e}")
+    
+    user.google_token_json = json.dumps(existing, ensure_ascii=False)
+    db.add(user)
+    await db.commit()
+    await db.refresh(user)
 
 
 async def sync_user_health_data(user: User, db: AsyncSession, access_token: str | None = None) -> dict:
@@ -59,22 +51,19 @@ async def sync_user_health_data(user: User, db: AsyncSession, access_token: str 
     target_token = access_token or getattr(user, 'access_token', None)
     cached_data = {}
 
-    token_path = get_inbody_token_path(user.id)
-    if os.path.exists(token_path):
+    if user.google_token_json:
         try:
-            with open(token_path, "r", encoding="utf-8") as f:
-                cached_data = json.load(f)
+            cached_data = json.loads(user.google_token_json)
         except Exception:
             pass
 
     # If user provided a fresh token right now, cache it immediately
     if target_token:
-        save_inbody_token_cache(user.id, target_token)
+        await save_inbody_token_cache(user, db, target_token)
         # re-read cache
-        if os.path.exists(token_path):
+        if user.google_token_json:
             try:
-                with open(token_path, "r", encoding="utf-8") as f:
-                    cached_data = json.load(f)
+                cached_data = json.loads(user.google_token_json)
             except Exception:
                 pass
     else:
@@ -114,7 +103,7 @@ async def sync_user_health_data(user: User, db: AsyncSession, access_token: str 
                         target_token = new_access
                         cached_data["access_token"] = new_access
                         cached_data["updated_at"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
-                        save_inbody_token_cache(user.id, new_access, "access_token", refresh_token=refresh_token_candidate)
+                        await save_inbody_token_cache(user, db, new_access, "access_token", refresh_token=refresh_token_candidate)
                         print(f"[Google Fit Sync] Automatically refreshed access token for user {user.id}")
         except Exception as renew_err:
             print(f"[Google Fit Sync] Token refresh warning: {renew_err}")

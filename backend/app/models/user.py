@@ -23,3 +23,5 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc)
     )
+    google_token_json: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    garmin_token_json: Mapped[Optional[str]] = mapped_column(String, nullable=True)

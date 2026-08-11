@@ -4,6 +4,8 @@ from datetime import date, datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
 from app.models.exercise import Exercise
+from app.models.user import User
+import json
 
 try:
     from garminconnect import Garmin
@@ -22,8 +24,25 @@ async def sync_garmin_activities(db: AsyncSession, user_id: int, garmin_email: s
     Uses TokenStore caching so users only need to enter email/password and SMS verification code ONCE.
     Subsequent synchronization requests automatically re-use secure OAuth session tokens.
     """
-    token_dir = os.path.join(os.getcwd(), "data", "garmin_tokens", f"user_{user_id}")
-    has_cached_tokens = os.path.exists(token_dir) and len(os.listdir(token_dir)) > 0 if os.path.exists(token_dir) else False
+    res = await db.execute(select(User).where(User.id == user_id))
+    user = res.scalar_one_or_none()
+    if not user:
+        return {"status": "error", "message": "User not found", "synced_workouts": 0}
+
+    token_dir = os.path.join(os.getcwd(), "data", "garmin_tokens_temp", f"user_{user_id}")
+    os.makedirs(token_dir, exist_ok=True)
+    
+    # 1. Restore tokens from DB to temporary directory
+    if user.garmin_token_json:
+        try:
+            tokens_dict = json.loads(user.garmin_token_json)
+            for fname, content in tokens_dict.items():
+                with open(os.path.join(token_dir, fname), "w", encoding="utf-8") as f:
+                    f.write(content)
+        except Exception:
+            pass
+
+    has_cached_tokens = len(os.listdir(token_dir)) > 0
 
     email = garmin_email or os.environ.get("GARMIN_EMAIL")
     password = garmin_password or os.environ.get("GARMIN_PASSWORD")
@@ -71,6 +90,20 @@ async def sync_garmin_activities(db: AsyncSession, user_id: int, garmin_email: s
             return client.get_activities(0, 20)
 
         activities = await asyncio.to_thread(fetch_garmin_data)
+
+        # 3. Save updated tokens back to DB
+        updated_tokens = {}
+        for fname in os.listdir(token_dir):
+            if fname.endswith(".json"):
+                try:
+                    with open(os.path.join(token_dir, fname), "r", encoding="utf-8") as f:
+                        updated_tokens[fname] = f.read()
+                except Exception:
+                    pass
+        if updated_tokens:
+            user.garmin_token_json = json.dumps(updated_tokens, ensure_ascii=False)
+            db.add(user)
+            await db.commit()
 
 
         for act in activities:
