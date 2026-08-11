@@ -131,6 +131,34 @@ async def login_test():
     except Exception as e:
         return {"status": "error", "steps": steps, "error": str(e), "trace": traceback.format_exc()}
 
+import httpx
+import datetime
+
+@app.get("/api/health/google-fit-debug")
+async def google_fit_debug(access_token: str):
+    if not access_token:
+        return {"error": "access_token query parameter is required"}
+    
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            headers = {"Authorization": f"Bearer {access_token}"}
+            now_dt = datetime.datetime.now(datetime.timezone.utc)
+            start_dt = now_dt - datetime.timedelta(days=90)
+            start_nanos = int(start_dt.timestamp() * 1e9)
+            end_nanos = int((now_dt + datetime.timedelta(days=1)).timestamp() * 1e9)
+            
+            weight_url = f"https://www.googleapis.com/fitness/v1/users/me/dataSources/derived:com.google.weight:com.google.android.gms:merge_weight/datasets/{start_nanos}-{end_nanos}"
+            
+            resp = await client.get(weight_url, headers=headers)
+            
+            return {
+                "status_code": resp.status_code,
+                "url_queried": weight_url,
+                "raw_response": resp.json() if resp.status_code == 200 else resp.text
+            }
+    except Exception as e:
+        return {"error": str(e)}
+
 # CORS - Allow cloud production origins safely without violating browser credentials policy
 app.add_middleware(
     CORSMiddleware,
