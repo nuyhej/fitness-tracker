@@ -84,8 +84,8 @@ class ExerciseOut(BaseModel):
 class InBodyCreate(BaseModel):
     measured_at: datetime
     weight: float
-    skeletal_muscle: float
-    body_fat_mass: float
+    skeletal_muscle: Optional[float] = None
+    body_fat_mass: Optional[float] = None
     body_fat_pct: Optional[float] = None
     bmi: Optional[float] = None
     basal_metabolic_rate: Optional[int] = None
@@ -98,8 +98,8 @@ class InBodyOut(BaseModel):
     user_id: int
     measured_at: datetime
     weight: float
-    skeletal_muscle: float
-    body_fat_mass: float
+    skeletal_muscle: Optional[float] = None
+    body_fat_mass: Optional[float] = None
     body_fat_pct: Optional[float] = None
     bmi: Optional[float] = None
     basal_metabolic_rate: Optional[int] = None
@@ -114,8 +114,8 @@ class InBodyOut(BaseModel):
 class InBodyTrendPoint(BaseModel):
     measured_at: datetime
     weight: float
-    skeletal_muscle: float
-    body_fat_mass: float
+    skeletal_muscle: Optional[float] = None
+    body_fat_mass: Optional[float] = None
     body_fat_pct: Optional[float] = None
 
 
