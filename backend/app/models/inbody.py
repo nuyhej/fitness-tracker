@@ -16,8 +16,8 @@ class InBodyRecord(Base):
 
     # Core metrics
     weight: Mapped[float] = mapped_column(Float, nullable=False)
-    skeletal_muscle: Mapped[float] = mapped_column(Float, nullable=False)
-    body_fat_mass: Mapped[float] = mapped_column(Float, nullable=False)
+    skeletal_muscle: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    body_fat_mass: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     body_fat_pct: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     bmi: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     basal_metabolic_rate: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)

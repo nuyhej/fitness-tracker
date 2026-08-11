@@ -74,6 +74,8 @@ async def init_db():
             from sqlalchemy import text
             migrations = [
                 "ALTER TABLE exercises ALTER COLUMN source TYPE VARCHAR(50);",
+                "ALTER TABLE inbody_records ALTER COLUMN skeletal_muscle DROP NOT NULL;",
+                "ALTER TABLE inbody_records ALTER COLUMN body_fat_mass DROP NOT NULL;",
             ]
             for sql in migrations:
                 try:
