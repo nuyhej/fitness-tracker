@@ -83,10 +83,11 @@ async def check_db_health():
         import traceback
         return {"status": "error", "error": str(e), "trace": traceback.format_exc()}
 
-# CORS - Allow cloud production origins
+# CORS - Allow cloud production origins safely without violating browser credentials policy
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"] if os.environ.get("ENV") == "production" else [settings.FRONTEND_URL, "http://localhost:5173", "http://localhost:3000", "*"],
+    allow_origins=[settings.FRONTEND_URL, "http://localhost:5173", "http://localhost:3000"],
+    allow_origin_regex=".*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
