@@ -83,6 +83,18 @@ async def check_db_health():
         import traceback
         return {"status": "error", "error": str(e), "trace": traceback.format_exc()}
 
+@app.get("/api/health/init-tables")
+async def init_tables_manual():
+    """Manually trigger table creation and show exact errors."""
+    import traceback
+    from app.core.database import Base, engine as db_engine
+    try:
+        async with db_engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        return {"status": "ok", "message": "All tables created successfully!"}
+    except Exception as e:
+        return {"status": "error", "error": str(e), "trace": traceback.format_exc()}
+
 @app.get("/api/health/login-test")
 async def login_test():
     """Diagnostic endpoint that replicates the exact login flow to surface errors."""
