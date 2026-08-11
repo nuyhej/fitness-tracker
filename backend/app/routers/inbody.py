@@ -9,7 +9,7 @@ from app.core.database import get_db
 from app.core.security import get_current_user_id
 from app.models.inbody import InBodyRecord
 from app.models.user import User
-from app.services.sync_service import sync_user_health_data, sync_samsung_health_data, get_inbody_token_path
+from app.services.sync_service import sync_user_health_data, sync_samsung_health_data
 from app.schemas.schemas import InBodyCreate, InBodyOut, InBodyTrendPoint
 import os
 import json
@@ -20,19 +20,23 @@ router = APIRouter(prefix="/api/inbody", tags=["inbody"])
 @router.get("/google-status")
 async def check_google_fit_status(
     user_id: int = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
 ):
-    token_path = get_inbody_token_path(user_id)
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    
     connected = False
     token_type = None
-    if os.path.exists(token_path):
+    
+    if user and user.google_token_json:
         try:
-            with open(token_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                if data.get("access_token") or data.get("refresh_token"):
-                    connected = True
-                    token_type = data.get("token_type") or ("refresh_token" if str(data.get("refresh_token", "")).startswith("1//") else "access_token")
+            data = json.loads(user.google_token_json)
+            if data.get("access_token") or data.get("refresh_token"):
+                connected = True
+                token_type = data.get("token_type") or ("refresh_token" if str(data.get("refresh_token", "")).startswith("1//") else "access_token")
         except Exception:
             pass
+            
     return {"connected": connected, "token_type": token_type}
 
 
