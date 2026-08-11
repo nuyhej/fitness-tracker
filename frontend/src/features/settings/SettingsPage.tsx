@@ -18,6 +18,32 @@ export default function SettingsPage() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [testStatus, setTestStatus] = useState<string | null>(null);
   
+  // Google Fit Token State
+  const [googleFitToken, setGoogleFitToken] = useState('');
+  const [isGoogleTokenSaving, setIsGoogleTokenSaving] = useState(false);
+  const [googleTokenMsg, setGoogleTokenMsg] = useState<string | null>(null);
+
+  const handleSaveGoogleToken = async () => {
+    if (!googleFitToken.trim()) return;
+    try {
+      setIsGoogleTokenSaving(true);
+      setGoogleTokenMsg(null);
+      // Calls the same /inbody/sync endpoint with the new token
+      const res = await api.post<{ status: string; message?: string }>('/inbody/sync', { access_token: googleFitToken.trim() });
+      if (res.status === 'success') {
+        setGoogleTokenMsg(`✅ 토큰이 성공적으로 검증 및 저장되었습니다! (${res.message || '완료'})`);
+        setGoogleFitToken('');
+        soundEngine.playSyncSuccessChime();
+      } else {
+        setGoogleTokenMsg(`❌ 실패: ${res.message || '토큰이 유효하지 않거나 만료되었습니다.'}`);
+      }
+    } catch (err: any) {
+      setGoogleTokenMsg(`❌ 서버 통신 오류가 발생했습니다.`);
+    } finally {
+      setIsGoogleTokenSaving(false);
+    }
+  };
+
   // Account merge state
   const [mergeEmail, setMergeEmail] = useState('');
   const [isMerging, setIsMerging] = useState(false);
@@ -262,6 +288,67 @@ export default function SettingsPage() {
               {isGarminSyncing ? '스마트워치 통신 중...' : '🔄 스마트워치 트레이닝 활동량 재동기화'}
             </button>
           </div>
+        </div>
+
+        {/* Google Fit Token Management Section */}
+        <div className="card settings-section" style={{ borderLeft: '4px solid #10B981', marginTop: '24px' }}>
+          <h3 className="section-title">🔑 구글 헬스 커넥트 (Google Fit) 토큰 관리</h3>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '13.5px', lineHeight: 1.6, margin: '0 0 16px' }}>
+            인바디 체성분 자동 연동을 위한 <strong>구글 피트니스 토큰(Refresh Token)</strong>을 직접 교체할 수 있습니다.<br />
+            토큰이 만료되어 팝업이 뜨거나 연동이 끊어졌을 때 아래에서 새 토큰을 발급받아 붙여넣어 주세요!
+          </p>
+          
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+            <input
+              type="text"
+              value={googleFitToken}
+              onChange={(e) => setGoogleFitToken(e.target.value)}
+              placeholder="1//... 로 시작하는 새 토큰을 여기에 붙여넣으세요"
+              style={{
+                flex: 1, padding: '12px 14px', borderRadius: '10px',
+                border: '2px solid var(--border-color)', background: 'var(--bg-secondary)',
+                color: 'var(--text-primary)', fontSize: '14px', fontFamily: 'monospace',
+              }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <a
+              href="https://developers.google.com/oauthplayground/?step=1&scopes=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Ffitness.body.read"
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                padding: '10px 16px', borderRadius: '8px', background: '#10B981', color: '#fff',
+                fontWeight: 700, textDecoration: 'none', fontSize: '13px', display: 'inline-flex', alignItems: 'center'
+              }}
+            >
+              🔗 새 토큰 발급소 열기
+            </a>
+            <button
+              type="button"
+              className="btn btn-primary"
+              disabled={!googleFitToken.trim() || isGoogleTokenSaving}
+              onClick={handleSaveGoogleToken}
+              style={{
+                padding: '10px 16px', borderRadius: '8px',
+                background: googleFitToken.trim() ? 'linear-gradient(135deg, #10B981, #059669)' : '#666',
+                border: 'none', color: '#fff', fontWeight: 700, fontSize: '13px', cursor: googleFitToken.trim() ? 'pointer' : 'not-allowed'
+              }}
+            >
+              {isGoogleTokenSaving ? '토큰 검증 중...' : '💾 새 토큰 저장 및 즉시 연동'}
+            </button>
+          </div>
+
+          {googleTokenMsg && (
+            <div style={{ 
+              marginTop: '12px', padding: '10px 14px', borderRadius: '8px', 
+              background: googleTokenMsg.startsWith('✅') ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)', 
+              color: googleTokenMsg.startsWith('✅') ? '#10B981' : '#EF4444',
+              fontSize: '13.5px', fontWeight: 600 
+            }}>
+              {googleTokenMsg}
+            </div>
+          )}
         </div>
 
 
