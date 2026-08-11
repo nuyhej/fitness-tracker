@@ -105,8 +105,22 @@ async def sync_user_health_data(user: User, db: AsyncSession, access_token: str 
                         cached_data["updated_at"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
                         await save_inbody_token_cache(user, db, new_access, "access_token", refresh_token=refresh_token_candidate)
                         print(f"[Google Fit Sync] Automatically refreshed access token for user {user.id}")
+                else:
+                    print(f"[Google Fit Sync] Token refresh FAILED (status {token_resp.status_code}): {token_resp.text}")
+                    return {
+                        "status": "expired",
+                        "message": "🔒 구글 헬스 커넥트 연동 토큰이 만료되었거나 권한이 없습니다. 토큰 재입력 화면에서 [🔗 토큰 발급소]를 열어 새 토큰(1//...)을 발급받아 입력해주세요!",
+                        "synced_days": 0, "new_records": 0,
+                        "source": "Google Health Connect & Samsung Health (Live API)"
+                    }
         except Exception as renew_err:
             print(f"[Google Fit Sync] Token refresh warning: {renew_err}")
+            return {
+                "status": "expired",
+                "message": "🔒 구글 헬스 커넥트 연동 토큰이 만료되었거나 권한이 없습니다. 토큰 재입력 화면에서 [🔗 토큰 발급소]를 열어 새 토큰(1//...)을 발급받아 입력해주세요!",
+                "synced_days": 0, "new_records": 0,
+                "source": "Google Health Connect & Samsung Health (Live API)"
+            }
 
     # 2. Query Google Fit Cloud API for Weight, Body Fat Pct, and Lean Mass
     try:
