@@ -43,8 +43,8 @@ export default function WeeklyGrid({ data, onDataChange }: WeeklyGridProps) {
           return (
             <div className="cell-inbody">
               <span className="inbody-value">{day.inbody.weight}kg</span>
-              <span className="inbody-detail">근 {day.inbody.skeletal_muscle}</span>
-              <span className="inbody-detail">지 {day.inbody.body_fat_mass}</span>
+              {day.inbody.skeletal_muscle && <span className="inbody-detail">근 {day.inbody.skeletal_muscle}</span>}
+              {day.inbody.body_fat_mass && <span className="inbody-detail">지 {day.inbody.body_fat_mass}</span>}
             </div>
           );
         }

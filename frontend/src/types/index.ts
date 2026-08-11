@@ -41,8 +41,8 @@ export interface InBodyRecord {
   user_id: number;
   measured_at: string;
   weight: number;
-  skeletal_muscle: number;
-  body_fat_mass: number;
+  skeletal_muscle?: number | null;
+  body_fat_mass?: number | null;
   body_fat_pct?: number;
   bmi?: number;
   basal_metabolic_rate?: number;
@@ -55,8 +55,8 @@ export interface InBodyRecord {
 export interface InBodyTrendPoint {
   measured_at: string;
   weight: number;
-  skeletal_muscle: number;
-  body_fat_mass: number;
+  skeletal_muscle?: number | null;
+  body_fat_mass?: number | null;
   body_fat_pct?: number;
 }
 
