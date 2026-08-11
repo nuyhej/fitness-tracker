@@ -75,8 +75,9 @@ async def get_summary_stats(
         latest = all_inbody[0]
         oldest = all_inbody[-1]
         weight_change = round(latest.weight - oldest.weight, 1)
-        muscle_change = round(latest.skeletal_muscle - oldest.skeletal_muscle, 1)
-        if latest.body_fat_pct and oldest.body_fat_pct:
+        if latest.skeletal_muscle is not None and oldest.skeletal_muscle is not None:
+            muscle_change = round(latest.skeletal_muscle - oldest.skeletal_muscle, 1)
+        if latest.body_fat_pct is not None and oldest.body_fat_pct is not None:
             fat_pct_change = round(latest.body_fat_pct - oldest.body_fat_pct, 1)
     elif len(all_inbody) == 1:
         # If only 1 record exists, provide strong default shifts from simulated garmin/inbody sync
@@ -142,6 +143,9 @@ async def get_weekly_dashboard(
     )
     fasting_records = fasting_result.scalars().all()
 
+    from zoneinfo import ZoneInfo
+    kst = ZoneInfo("Asia/Seoul")
+
     # Organize by day
     days = []
     for i in range(7):
@@ -151,13 +155,13 @@ async def get_weekly_dashboard(
 
         day_inbody = None
         for ib in inbody_records:
-            if ib.measured_at.date() == current_date:
+            if ib.measured_at.astimezone(kst).date() == current_date:
                 day_inbody = ib
                 break
 
         day_fasting = None
         for f in fasting_records:
-            if f.start_time.date() == current_date:
+            if f.start_time.astimezone(kst).date() == current_date:
                 day_fasting = f
                 break
 
@@ -207,6 +211,9 @@ async def get_monthly_dashboard(
     for row in result:
         exercise_dates.add(row[0])
 
+    from zoneinfo import ZoneInfo
+    kst = ZoneInfo("Asia/Seoul")
+
     inbody_map = {}
     result = await db.execute(
         select(InBodyRecord).where(
@@ -214,7 +221,7 @@ async def get_monthly_dashboard(
         )
     )
     for record in result.scalars():
-        inbody_map[record.measured_at.date()] = record.weight
+        inbody_map[record.measured_at.astimezone(kst).date()] = record.weight
 
     fasting_dates = set()
     result = await db.execute(
@@ -223,7 +230,7 @@ async def get_monthly_dashboard(
         ).distinct()
     )
     for row in result:
-        fasting_dates.add(row[0].date())
+        fasting_dates.add(row[0].astimezone(kst).date())
 
     # Build day badges
     days = []
