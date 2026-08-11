@@ -26,12 +26,21 @@ export default function BodyCompChart({ refreshKey = 0 }: { refreshKey?: number 
     const fetchData = async () => {
       try {
         setIsLoading(true);
-        const fromDate = user?.diet_start_date || '2026-01-01';
         const [trendRes, statsRes] = await Promise.all([
-          api.get<InBodyTrendPoint[]>(`/inbody/trend?from=${fromDate}`),
+          api.get<InBodyTrendPoint[]>('/inbody/trend'),
           api.get<SummaryStats>('/dashboard/summary-stats')
         ]);
-        setTrendData(trendRes);
+        
+        let processedTrend = trendRes;
+        // If there's exactly 1 data point, duplicate it to draw a flat line instead of crashing
+        if (processedTrend.length === 1) {
+            processedTrend = [
+                { ...processedTrend[0], measured_at: processedTrend[0].measured_at },
+                { ...processedTrend[0], measured_at: new Date().toISOString() }
+            ];
+        }
+        
+        setTrendData(processedTrend);
         setStats(statsRes);
       } catch (err) {
         console.error('Failed to fetch trend or stats:', err);
@@ -42,18 +51,18 @@ export default function BodyCompChart({ refreshKey = 0 }: { refreshKey?: number 
     fetchData();
   }, [user, refreshKey]);
 
-  // Use simulation data if fewer than 2 real points exist to maintain stunning visual WOW factor
-  const isSimulation = trendData.length < 2;
+  // Use simulation data ONLY if absolutely 0 real points exist
+  const isSimulation = trendData.length === 0;
   const displayPoints = isSimulation ? [
     { measured_at: '1주차 (기준일)', weight: 78.4, skeletal_muscle: 32.1, body_fat_pct: 23.5, body_fat_mass: 18.4 },
     { measured_at: '2주차 (스위치온)', weight: 76.8, skeletal_muscle: 32.3, body_fat_pct: 22.1, body_fat_mass: 17.0 },
     { measured_at: '3주차 (존2 러닝)', weight: 75.5, skeletal_muscle: 32.6, body_fat_pct: 20.8, body_fat_mass: 15.7 },
     { measured_at: '4주차 (HIIT 연동)', weight: 74.2, skeletal_muscle: 33.0, body_fat_pct: 19.4, body_fat_mass: 14.4 },
     { measured_at: '현재 실황', weight: 73.1, skeletal_muscle: 33.4, body_fat_pct: 18.2, body_fat_mass: 13.3 },
-  ] : trendData.map(p => ({
+  ] : trendData.map((p, idx) => ({
     ...p,
-    measured_at: new Date(p.measured_at).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' }),
-    body_fat_pct: p.body_fat_pct || roundFat(p.weight, p.body_fat_mass)
+    measured_at: isSimulation ? p.measured_at : (idx === 0 && trendData.length === 2 && p.weight === trendData[1].weight) ? '측정일' : new Date(p.measured_at).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' }),
+    body_fat_pct: p.body_fat_pct || roundFat(p.weight, p.body_fat_mass || 0)
   }));
 
   function roundFat(w: number, fat: number) {
