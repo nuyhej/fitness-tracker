@@ -10,6 +10,9 @@ if db_url.startswith("postgres://"):
 elif db_url.startswith("postgresql://") and not db_url.startswith("postgresql+asyncpg://"):
     db_url = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
 
+import socket
+from urllib.parse import urlparse
+
 connect_args = {}
 if "sqlite" in db_url:
     connect_args["check_same_thread"] = False
@@ -18,9 +21,19 @@ else:
     connect_args["statement_cache_size"] = 0
     connect_args["ssl"] = "require"
     
-    # asyncpg does not support ?sslmode=require in the URL, strip it to prevent crashes
     if "?" in db_url:
         db_url = db_url.split("?")[0]
+        
+    # CRITICAL FIX for Render's IPv4-only environment:
+    # asyncpg crashes if it tries IPv6 first and fails. Force IPv4 resolution.
+    if "supabase.com" in db_url:
+        try:
+            parsed = urlparse(db_url)
+            if parsed.hostname:
+                ipv4 = socket.gethostbyname(parsed.hostname)
+                db_url = db_url.replace(parsed.hostname, ipv4)
+        except Exception:
+            pass
 
 engine = create_async_engine(
     db_url,
@@ -48,16 +61,15 @@ async def get_db():
 
 
 async def init_db():
+    import logging
+    logger = logging.getLogger("jjinfit.db")
+    
     try:
         async with engine.begin() as conn:
+            logger.info("[init_db] Creating all tables...")
             await conn.run_sync(Base.metadata.create_all)
-            try:
-                from sqlalchemy import text
-                await conn.execute(text("ALTER TABLE users ADD COLUMN hashed_password VARCHAR(255);"))
-            except Exception:
-                pass  # Column already exists in sqlite schema
+            logger.info("[init_db] Tables created successfully!")
     except Exception as e:
-        import logging
-        logging.warning(f"Database table check/init handled concurrently or existed: {e}")
-
-
+        logger.error(f"[init_db] CRITICAL - Table creation FAILED: {e}")
+        # Re-raise so the server startup clearly shows the error
+        raise
