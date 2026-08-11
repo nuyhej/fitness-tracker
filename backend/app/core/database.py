@@ -13,6 +13,10 @@ elif db_url.startswith("postgresql://") and not db_url.startswith("postgresql+as
 connect_args = {}
 if "sqlite" in db_url:
     connect_args["check_same_thread"] = False
+else:
+    # CRITICAL FIX for Supabase PgBouncer (Port 6543): Disable asyncpg prepared statement caching
+    connect_args["prepared_statement_cache_size"] = 0
+    connect_args["statement_cache_size"] = 0
 
 engine = create_async_engine(
     db_url,
