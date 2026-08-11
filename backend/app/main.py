@@ -83,6 +83,42 @@ async def check_db_health():
         import traceback
         return {"status": "error", "error": str(e), "trace": traceback.format_exc()}
 
+@app.get("/api/health/login-test")
+async def login_test():
+    """Diagnostic endpoint that replicates the exact login flow to surface errors."""
+    import traceback
+    steps = []
+    try:
+        steps.append("1. Creating DB session...")
+        async with async_session_factory() as db:
+            steps.append("2. DB session created OK")
+            
+            steps.append("3. Querying User table...")
+            result = await db.execute(select(User).where(User.email == "test_diag@jjinfit.local"))
+            steps.append("4. Query executed OK")
+            
+            user = result.scalar_one_or_none()
+            steps.append(f"5. User lookup result: {'found' if user else 'not found (will create)'}")
+            
+            if not user:
+                steps.append("6. Creating new test user...")
+                user = User(
+                    email="test_diag@jjinfit.local",
+                    nickname="진단테스트",
+                    avatar_url="https://api.dicebear.com/7.x/bottts/svg?seed=diag",
+                    provider="demo",
+                    provider_id="diag-test-id",
+                )
+                db.add(user)
+                await db.commit()
+                steps.append("7. User created and committed OK")
+                await db.refresh(user)
+                steps.append(f"8. User refreshed OK - id={user.id}")
+            
+            return {"status": "ok", "steps": steps, "user_id": user.id, "email": user.email}
+    except Exception as e:
+        return {"status": "error", "steps": steps, "error": str(e), "trace": traceback.format_exc()}
+
 # CORS - Allow cloud production origins safely without violating browser credentials policy
 app.add_middleware(
     CORSMiddleware,
