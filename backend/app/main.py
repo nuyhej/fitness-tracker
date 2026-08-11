@@ -63,14 +63,25 @@ async def lifespan(app: FastAPI):
     yield
     sync_task.cancel()
 
-
-
 app = FastAPI(
     title="Personal Health Dashboard API",
     description="Backend API for the Personal Health & Fitness Tracker",
     version="1.0.0",
     lifespan=lifespan,
 )
+
+from sqlalchemy import text
+from app.core.database import engine
+
+@app.get("/api/health/db")
+async def check_db_health():
+    try:
+        async with engine.begin() as conn:
+            await conn.execute(text("SELECT 1"))
+        return {"status": "ok", "message": "Database connected successfully!"}
+    except Exception as e:
+        import traceback
+        return {"status": "error", "error": str(e), "trace": traceback.format_exc()}
 
 # CORS - Allow cloud production origins
 app.add_middleware(
