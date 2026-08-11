@@ -69,7 +69,17 @@ async def init_db():
             logger.info("[init_db] Creating all tables...")
             await conn.run_sync(Base.metadata.create_all)
             logger.info("[init_db] Tables created successfully!")
+            
+            # Migrate existing columns that may be too small for PostgreSQL
+            from sqlalchemy import text
+            migrations = [
+                "ALTER TABLE exercises ALTER COLUMN source TYPE VARCHAR(50);",
+            ]
+            for sql in migrations:
+                try:
+                    await conn.execute(text(sql))
+                except Exception:
+                    pass  # Column already correct size or table doesn't exist yet
     except Exception as e:
         logger.error(f"[init_db] CRITICAL - Table creation FAILED: {e}")
-        # Re-raise so the server startup clearly shows the error
         raise

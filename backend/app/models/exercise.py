@@ -18,7 +18,7 @@ class Exercise(Base):
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     garmin_activity_id: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     garmin_data: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
-    source: Mapped[str] = mapped_column(String(10), nullable=False, default="manual")  # manual/garmin
+    source: Mapped[str] = mapped_column(String(50), nullable=False, default="manual")  # manual/garmin_connect/samsung_health
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc)
     )
