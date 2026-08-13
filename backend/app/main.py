@@ -183,7 +183,7 @@ app.include_router(dashboard.router)
 app.include_router(analysis.router)
 
 
-@app.get("/api/health")
+@app.api_route("/api/health", methods=["GET", "HEAD"])
 async def health_check():
     return {"status": "ok", "message": "⚡ 찐fit Cloud Backend Engine is operating smoothly!"}
 
