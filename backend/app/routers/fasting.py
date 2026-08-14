@@ -9,7 +9,7 @@ from app.core.database import get_db
 from app.core.security import get_current_user_id
 from app.models.fasting import FastingRecord
 from app.models.user import User
-from app.schemas.schemas import FastingStart, FastingEnd, FastingOut
+from app.schemas.schemas import FastingStart, FastingEnd, FastingUpdate, FastingOut
 
 router = APIRouter(prefix="/api/fasting", tags=["fasting"])
 
@@ -59,6 +59,45 @@ async def end_fasting(
     delta = fasting_end.end_time - record.start_time
     record.actual_hours = round(delta.total_seconds() / 3600, 2)
     record.is_completed = record.actual_hours >= record.goal_hours
+
+    await db.commit()
+    await db.refresh(record)
+    return record
+
+
+@router.put("/{fasting_id}", response_model=FastingOut)
+async def update_fasting(
+    fasting_id: int,
+    fasting_update: FastingUpdate,
+    user_id: int = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(FastingRecord).where(
+            and_(FastingRecord.id == fasting_id, FastingRecord.user_id == user_id)
+        )
+    )
+    record = result.scalar_one_or_none()
+    if not record:
+        raise HTTPException(status_code=404, detail="Fasting record not found")
+
+    if fasting_update.start_time is not None:
+        record.start_time = fasting_update.start_time
+    if fasting_update.end_time is not None:
+        record.end_time = fasting_update.end_time
+    if fasting_update.goal_hours is not None:
+        record.goal_hours = fasting_update.goal_hours
+    if fasting_update.note is not None:
+        record.note = fasting_update.note
+
+    # Recalculate actual_hours and completion status if end_time exists
+    if record.end_time:
+        delta = record.end_time - record.start_time
+        record.actual_hours = round(delta.total_seconds() / 3600, 2)
+        record.is_completed = record.actual_hours >= record.goal_hours
+    else:
+        record.actual_hours = None
+        record.is_completed = False
 
     await db.commit()
     await db.refresh(record)

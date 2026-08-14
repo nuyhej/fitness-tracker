@@ -205,20 +205,45 @@ export default function SettingsPage() {
           <h3 className="section-title">⏱️ 단식 및 식단 설정</h3>
           
           <div className="form-group">
-            <label>기본 단식 목표 시간</label>
-            <select
-              className="input"
-              value={fastingGoal}
-              onChange={(e) => setFastingGoal(parseInt(e.target.value, 10))}
-              style={{ background: 'var(--bg-input)' }}
-            >
-              <option value={12}>12시간 (초급 간헐적 단식)</option>
-              <option value={16}>16시간 (16:8 간헐적 단식 - 권장)</option>
-              <option value={18}>18시간 (18:6 단식)</option>
-              <option value={20}>20시간 (20:4 단식)</option>
-              <option value={24}>24시간 (24시간 단식)</option>
-            </select>
-            <span className="help-text">타이머 가동 시 기본 목표 시간으로 자동 지정됩니다.</span>
+            <label>기본 단식 목표 시간 (시간 단위)</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+              <input
+                type="number"
+                className="input"
+                value={fastingGoal}
+                onChange={(e) => setFastingGoal(parseInt(e.target.value, 10) || 16)}
+                min="1"
+                max="72"
+                step="1"
+                style={{ background: 'var(--bg-input)', width: '120px', fontWeight: 'bold', fontSize: '16px' }}
+              />
+              <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>시간</span>
+            </div>
+            
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
+              {[12, 14, 16, 18, 20, 24].map(preset => (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => setFastingGoal(preset)}
+                  style={{
+                    padding: '6px 12px',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    borderRadius: '6px',
+                    border: '1px solid',
+                    borderColor: fastingGoal === preset ? 'var(--color-primary)' : 'var(--border-secondary)',
+                    background: fastingGoal === preset ? 'rgba(45, 212, 168, 0.15)' : 'transparent',
+                    color: fastingGoal === preset ? 'var(--color-primary)' : 'var(--text-secondary)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  {preset}시간
+                </button>
+              ))}
+            </div>
+            <span className="help-text">타이머 가동 시 기본 목표 시간으로 자동 지정됩니다. (소수점 입력 가능)</span>
           </div>
         </div>
 

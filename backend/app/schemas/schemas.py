@@ -130,6 +130,13 @@ class FastingEnd(BaseModel):
     end_time: datetime
 
 
+class FastingUpdate(BaseModel):
+    start_time: Optional[datetime] = None
+    end_time: Optional[datetime] = None
+    goal_hours: Optional[int] = None
+    note: Optional[str] = None
+
+
 class FastingOut(BaseModel):
     id: int
     user_id: int
