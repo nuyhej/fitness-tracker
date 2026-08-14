@@ -8,6 +8,7 @@ import OverviewPage from './features/overview/OverviewPage';
 import CalendarPage from './features/calendar/CalendarPage';
 import TimerPage from './features/timer/TimerPage';
 import SettingsPage from './features/settings/SettingsPage';
+import AdminPage from './features/admin/AdminPage';
 import Layout from './components/Layout/Layout';
 import './styles/index.css';
 
@@ -97,6 +98,16 @@ function AppRoutes() {
           <ProtectedRoute>
             <Layout>
               <SettingsPage />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/secret-dashboard"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <AdminPage />
             </Layout>
           </ProtectedRoute>
         }

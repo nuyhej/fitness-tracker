@@ -20,7 +20,7 @@ from app.models.exercise import Exercise  # noqa: F401
 from app.models.inbody import InBodyRecord  # noqa: F401
 from app.models.fasting import FastingRecord  # noqa: F401
 
-from app.routers import auth, meals, exercises, inbody, fasting, dashboard, analysis
+from app.routers import auth, meals, exercises, inbody, fasting, dashboard, analysis, admin
 
 settings = get_settings()
 
@@ -177,6 +177,7 @@ app.include_router(inbody.router)
 app.include_router(fasting.router)
 app.include_router(dashboard.router)
 app.include_router(analysis.router)
+app.include_router(admin.router)
 
 
 @app.api_route("/api/health", methods=["GET", "HEAD"])
