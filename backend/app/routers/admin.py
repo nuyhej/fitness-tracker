@@ -5,7 +5,7 @@ from sqlalchemy import select, func, distinct
 
 from app.core.database import get_db
 from app.models.user import User
-from app.models.meal import MealRecord
+from app.models.meal import Meal
 from app.models.inbody import InBodyRecord
 from app.models.fasting import FastingRecord
 
@@ -27,11 +27,11 @@ async def get_all_users_stats(
             User.email,
             User.nickname,
             User.created_at,
-            func.count(distinct(MealRecord.id)).label("meal_count"),
+            func.count(distinct(Meal.id)).label("meal_count"),
             func.count(distinct(InBodyRecord.id)).label("inbody_count"),
             func.count(distinct(FastingRecord.id)).label("fasting_count")
         )
-        .outerjoin(MealRecord, User.id == MealRecord.user_id)
+        .outerjoin(Meal, User.id == Meal.user_id)
         .outerjoin(InBodyRecord, User.id == InBodyRecord.user_id)
         .outerjoin(FastingRecord, User.id == FastingRecord.user_id)
         .group_by(User.id)
