@@ -70,10 +70,6 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-@app.api_route("/", methods=["GET", "HEAD"])
-async def root_ping():
-    return {"status": "ok", "message": "Render server is awake and running!"}
-
 from sqlalchemy import text
 from app.core.database import engine
 
