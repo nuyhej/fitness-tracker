@@ -112,7 +112,8 @@
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .monthly-cell {
-    min-height: 65px;
+    height: 75px; /* Fixed height instead of min-height to force uniform size */
+    overflow: hidden;
     padding: 4px;
   }
 

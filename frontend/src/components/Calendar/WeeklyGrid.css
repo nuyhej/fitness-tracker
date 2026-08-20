@@ -238,6 +238,13 @@
     -webkit-overflow-scrolling: touch;
   }
 
+  .weekly-grid .category-label {
+    position: sticky;
+    left: 0;
+    z-index: 10;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05); /* Slight shadow to separate from scrolling content */
+  }
+
   .grid-header-cell .day-name {
     font-size: var(--text-sm);
   }
