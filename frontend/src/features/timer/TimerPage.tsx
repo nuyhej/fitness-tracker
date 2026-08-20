@@ -14,7 +14,7 @@ export default function TimerPage() {
 
       <FastingTimer onFastingEnd={() => {}} />
 
-      <div className="glass-card" style={{ padding: '24px', background: 'rgba(20, 25, 33, 0.5)', borderRadius: 'var(--radius-lg)', borderLeft: '4px solid var(--color-primary-400)' }}>
+      <div className="glass-card" style={{ padding: '24px', background: 'var(--bg-card)', borderRadius: 'var(--radius-lg)', borderLeft: '4px solid var(--color-primary-400)' }}>
         <h4 style={{ fontSize: '16px', fontWeight: 700, margin: '0 0 12px', color: 'var(--color-primary-400)' }}>
           💡 스위치온 16:8 공복 준수 꿀팁
         </h4>

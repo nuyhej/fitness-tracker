@@ -173,7 +173,8 @@ body {
   padding: var(--space-6);
   max-width: 600px;
   width: 90%;
-  max-height: 85vh;
+  max-height: 80vh; /* Fallback */
+  max-height: 80dvh;
   overflow-y: auto;
   z-index: var(--z-modal);
   box-shadow: var(--shadow-modal);

@@ -122,6 +122,7 @@ class InBodyTrendPoint(BaseModel):
 # --- Fasting ---
 class FastingStart(BaseModel):
     start_time: datetime
+    end_time: Optional[datetime] = None
     goal_hours: Optional[int] = None  # Uses user's default if not provided
     note: Optional[str] = None
 

@@ -578,7 +578,7 @@ export default function OverviewPage() {
         <div 
           className="glass-card" 
           onClick={() => navigate('/calendar')}
-          style={{ padding: '24px', cursor: 'pointer', borderLeft: '4px solid var(--color-primary-500)', transition: 'transform 0.2s', background: 'rgba(20, 25, 33, 0.6)' }}
+          style={{ padding: '24px', cursor: 'pointer', borderLeft: '4px solid var(--color-primary-500)', transition: 'transform 0.2s', background: 'var(--bg-card)' }}
         >
           <div style={{ fontSize: '24px', marginBottom: '12px' }}>📅</div>
           <h3 style={{ fontSize: '18px', fontWeight: 700, margin: '0 0 8px', color: 'var(--text-primary)' }}>
@@ -592,7 +592,7 @@ export default function OverviewPage() {
         <div 
           className="glass-card" 
           onClick={() => navigate('/timer')}
-          style={{ padding: '24px', cursor: 'pointer', borderLeft: '4px solid var(--color-accent-500)', transition: 'transform 0.2s', background: 'rgba(20, 25, 33, 0.6)' }}
+          style={{ padding: '24px', cursor: 'pointer', borderLeft: '4px solid var(--color-accent-500)', transition: 'transform 0.2s', background: 'var(--bg-card)' }}
         >
           <div style={{ fontSize: '24px', marginBottom: '12px' }}>⏱️</div>
           <h3 style={{ fontSize: '18px', fontWeight: 700, margin: '0 0 8px', color: 'var(--text-primary)' }}>

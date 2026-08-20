@@ -129,10 +129,20 @@ export default function FastingTimer({ onFastingEnd }: FastingTimerProps) {
           )}
         </h3>
 
-        <p className="fasting-meta">
-          목표 시간: <strong>{activeFasting?.goal_hours || user?.fasting_goal_hours || 16}시간</strong> 
-          {activeFasting && ` (시작: ${new Date(activeFasting.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`}
-        </p>
+        {activeFasting ? (
+          <div className="fasting-meta" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <span>목표 시간: <strong>{activeFasting.goal_hours}시간</strong></span>
+            <span>시작: {new Date(activeFasting.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} ~ 목표 종료: <strong>{(() => {
+              const end = new Date(activeFasting.start_time);
+              end.setHours(end.getHours() + activeFasting.goal_hours);
+              return end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            })()}</strong></span>
+          </div>
+        ) : (
+          <p className="fasting-meta">
+            목표 시간: <strong>{user?.fasting_goal_hours || 16}시간</strong> 
+          </p>
+        )}
 
         <div className="fasting-action-group">
           {activeFasting ? (

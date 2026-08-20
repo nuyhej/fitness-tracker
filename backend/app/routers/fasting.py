@@ -30,9 +30,16 @@ async def start_fasting(
     record = FastingRecord(
         user_id=user_id,
         start_time=fasting_in.start_time,
+        end_time=fasting_in.end_time,
         goal_hours=goal_hours,
         note=fasting_in.note,
     )
+    
+    if record.end_time:
+        delta = record.end_time - record.start_time
+        record.actual_hours = round(delta.total_seconds() / 3600, 2)
+        record.is_completed = record.actual_hours >= record.goal_hours
+    
     db.add(record)
     await db.commit()
     await db.refresh(record)

@@ -27,7 +27,7 @@ export default function WeeklyGrid({ data, onDataChange }: WeeklyGridProps) {
   const [showMealForm, setShowMealForm] = useState<{ date: string; type: string; initialData?: MealRecord } | null>(null);
   const [showExerciseForm, setShowExerciseForm] = useState<{ date: string; initialData?: ExerciseRecord } | null>(null);
   const [showInBodyForm, setShowInBodyForm] = useState<{ date: string } | null>(null);
-  const [showFastingEditForm, setShowFastingEditForm] = useState<{ fastingData: FastingOut } | null>(null);
+  const [showFastingEditForm, setShowFastingEditForm] = useState<{ fastingData?: FastingOut, date?: string } | null>(null);
 
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);
@@ -149,7 +149,18 @@ export default function WeeklyGrid({ data, onDataChange }: WeeklyGridProps) {
             </div>
           );
         }
-        return <span className="cell-empty">—</span>;
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'center' }}>
+            <button
+              className="cell-add-btn"
+              style={{ padding: '3px 0', fontSize: '13px', border: '1px dashed rgba(255,255,255,0.2)' }}
+              onClick={() => setShowFastingEditForm({ date: day.date })}
+              title="과거 단식 수동 기록 추가"
+            >
+              + 단식
+            </button>
+          </div>
+        );
       }
 
       default:
@@ -235,6 +246,7 @@ export default function WeeklyGrid({ data, onDataChange }: WeeklyGridProps) {
       {showFastingEditForm && (
         <FastingEditForm 
           fastingData={showFastingEditForm.fastingData}
+          date={showFastingEditForm.date}
           onClose={() => setShowFastingEditForm(null)}
           onSuccess={() => { setShowFastingEditForm(null); onDataChange(); }}
         />

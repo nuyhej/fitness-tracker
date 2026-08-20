@@ -230,8 +230,12 @@
 /* Responsive */
 @media (max-width: 768px) {
   .weekly-grid {
-    grid-template-columns: 60px repeat(7, 1fr);
-    font-size: 10px;
+    /* Allow horizontal scroll on mobile */
+    overflow-x: auto;
+    /* 1st column: 60px, other 7 columns min 75px each */
+    grid-template-columns: 60px repeat(7, minmax(75px, 1fr));
+    font-size: 10.5px;
+    -webkit-overflow-scrolling: touch;
   }
 
   .grid-header-cell .day-name {

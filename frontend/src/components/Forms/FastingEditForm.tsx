@@ -3,12 +3,13 @@ import { api } from '../../services/api';
 import { FastingOut } from '../../types';
 
 interface FastingEditFormProps {
-  fastingData: FastingOut;
+  fastingData?: FastingOut;
+  date?: string; // Used when creating a new record
   onClose: () => void;
   onSuccess: () => void;
 }
 
-export default function FastingEditForm({ fastingData, onClose, onSuccess }: FastingEditFormProps) {
+export default function FastingEditForm({ fastingData, date, onClose, onSuccess }: FastingEditFormProps) {
   // Convert UTC datetime strings to local datetime-local input format (YYYY-MM-DDThh:mm)
   const formatForInput = (isoString: string) => {
     if (!isoString) return '';
@@ -17,10 +18,30 @@ export default function FastingEditForm({ fastingData, onClose, onSuccess }: Fas
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
   };
 
-  const [startTime, setStartTime] = useState(formatForInput(fastingData.start_time));
-  const [endTime, setEndTime] = useState(fastingData.end_time ? formatForInput(fastingData.end_time) : '');
-  const [goalHours, setGoalHours] = useState(fastingData.goal_hours || 16);
-  const [note, setNote] = useState(fastingData.note || '');
+  // Pre-calculate default times for new records
+  const getDefaultStartTime = () => {
+    if (date) {
+      return `${date}T20:00`;
+    }
+    const d = new Date();
+    d.setHours(20, 0, 0, 0);
+    return formatForInput(d.toISOString());
+  };
+
+  const getDefaultEndTime = () => {
+    if (date) {
+      const nextDay = new Date(date);
+      nextDay.setDate(nextDay.getDate() + 1);
+      const pad = (n: number) => String(n).padStart(2, '0');
+      return `${nextDay.getFullYear()}-${pad(nextDay.getMonth() + 1)}-${pad(nextDay.getDate())}T12:00`;
+    }
+    return '';
+  };
+
+  const [startTime, setStartTime] = useState(fastingData ? formatForInput(fastingData.start_time) : getDefaultStartTime());
+  const [endTime, setEndTime] = useState(fastingData?.end_time ? formatForInput(fastingData.end_time) : (fastingData ? '' : getDefaultEndTime()));
+  const [goalHours, setGoalHours] = useState(fastingData?.goal_hours || 16);
+  const [note, setNote] = useState(fastingData?.note || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -37,10 +58,14 @@ export default function FastingEditForm({ fastingData, onClose, onSuccess }: Fas
         note: note || undefined
       };
 
-      await api.put(`/fasting/${fastingData.id}`, payload);
+      if (fastingData) {
+        await api.put(`/fasting/${fastingData.id}`, payload);
+      } else {
+        await api.post(`/fasting/start`, payload);
+      }
       onSuccess();
     } catch (err: any) {
-      alert(err.message || '단식 기록 수정에 실패했습니다.');
+      alert(err.message || '단식 기록 저장에 실패했습니다.');
     } finally {
       setIsSubmitting(false);
     }
@@ -50,7 +75,7 @@ export default function FastingEditForm({ fastingData, onClose, onSuccess }: Fas
     <div className="modal-overlay" onClick={onClose} style={{ zIndex: 9999 }}>
       <div className="modal-content glass-card" onClick={e => e.stopPropagation()} style={{ maxWidth: '400px' }}>
         <h2 style={{ fontSize: '18px', fontWeight: 800, margin: '0 0 16px', color: 'var(--text-primary)' }}>
-          ⏱️ 단식 기록 수정
+          ⏱️ 단식 기록 {fastingData ? '수정' : '추가'}
         </h2>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -107,7 +132,7 @@ export default function FastingEditForm({ fastingData, onClose, onSuccess }: Fas
           <div className="modal-actions" style={{ marginTop: '8px' }}>
             <button type="button" className="btn btn-secondary" onClick={onClose}>취소</button>
             <button type="submit" className="btn btn-primary" disabled={!startTime || isSubmitting}>
-              {isSubmitting ? '저장 중...' : '수정하기'}
+              {isSubmitting ? '저장 중...' : (fastingData ? '수정하기' : '추가하기')}
             </button>
           </div>
         </form>
