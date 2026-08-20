@@ -23,6 +23,7 @@ class UserProfileUpdate(BaseModel):
     diet_start_date: Optional[date] = None
     fasting_goal_hours: Optional[int] = None
     theme_preference: Optional[str] = None
+    avatar_url: Optional[str] = None
 
 
 # --- Meal ---

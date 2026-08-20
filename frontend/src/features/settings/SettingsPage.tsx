@@ -10,6 +10,9 @@ export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
 
   const [nickname, setNickname] = useState(user?.nickname || '');
+  const [avatarUrl, setAvatarUrl] = useState(user?.avatar_url || '');
+  const EMOJI_AVATARS = ['🐶', '🐱', '🦊', '🐻', '🐼', '🦁', '🐯', '🐰', '🐹', '🦖', '🐉', '🦄', '🍎', '🍓', '🥑', '🍔', '🚀', '⭐', '🔥', '💪', '👽', '👾', '😎', '🤖'];
+  
   const [fastingGoal, setFastingGoal] = useState(user?.fasting_goal_hours || 16);
   const [dietStart, setDietStart] = useState(user?.diet_start_date || '');
   const [landingPage, setLandingPage] = useState(localStorage.getItem('default_landing') || '/overview');
@@ -85,6 +88,7 @@ export default function SettingsPage() {
         fasting_goal_hours: fastingGoal,
         diet_start_date: dietStart || undefined,
         theme_preference: theme,
+        avatar_url: avatarUrl,
       });
       localStorage.setItem('default_landing', landingPage);
       setSuccessMsg('설정이 성공적으로 저장되었습니다!');
@@ -185,6 +189,32 @@ export default function SettingsPage() {
               onChange={(e) => setNickname(e.target.value)}
               required
             />
+          </div>
+
+          <div className="form-group">
+            <label>프로필 이모지 아이콘</label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '4px' }}>
+              {EMOJI_AVATARS.map(emoji => (
+                <button
+                  key={emoji}
+                  type="button"
+                  onClick={() => setAvatarUrl(emoji)}
+                  style={{
+                    width: '40px', height: '40px', fontSize: '20px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: avatarUrl === emoji ? 'var(--color-primary-500)' : 'var(--bg-tertiary)',
+                    border: '2px solid',
+                    borderColor: avatarUrl === emoji ? 'var(--color-primary-500)' : 'transparent',
+                    borderRadius: '50%', cursor: 'pointer', transition: 'all 0.2s',
+                    boxShadow: avatarUrl === emoji ? '0 0 10px rgba(0, 188, 212, 0.4)' : 'none'
+                  }}
+                  title={emoji}
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+            <span className="help-text">마음에 드는 귀여운 이모지를 선택하여 상단 프로필을 꾸며보세요!</span>
           </div>
 
 

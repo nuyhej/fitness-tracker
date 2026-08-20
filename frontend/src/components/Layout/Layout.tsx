@@ -64,7 +64,11 @@ export default function Layout({ children }: { children: ReactNode }) {
 
           <div className="user-menu">
             {user?.avatar_url && (
-              <img src={user.avatar_url} alt="" className="user-avatar" />
+              user.avatar_url.startsWith('http') || user.avatar_url.startsWith('data:') ? (
+                <img src={user.avatar_url} alt="" className="user-avatar" />
+              ) : (
+                <div className="user-avatar emoji-avatar">{user.avatar_url}</div>
+              )
             )}
             <span className="user-name">{user?.nickname}</span>
             <button className="logout-btn" onClick={logout}>
