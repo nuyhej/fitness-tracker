@@ -76,6 +76,7 @@ async def init_db():
                 "ALTER TABLE exercises ALTER COLUMN source TYPE VARCHAR(50);",
                 "ALTER TABLE inbody_records ALTER COLUMN skeletal_muscle DROP NOT NULL;",
                 "ALTER TABLE inbody_records ALTER COLUMN body_fat_mass DROP NOT NULL;",
+                "ALTER TABLE users ADD COLUMN api_token VARCHAR(255) UNIQUE;",
             ]
             for sql in migrations:
                 try:

@@ -270,7 +270,38 @@ async def social_personal_login(body: SocialPersonalLoginRequest, db: AsyncSessi
     }
 
 
+import secrets
 
+@router.get("/api-token")
+async def get_api_token(
+    user_id: int = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """Retrieve the user's permanent API token for Shortcuts integration."""
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {"api_token": user.api_token}
+
+
+@router.post("/api-token")
+async def generate_api_token(
+    user_id: int = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """Generate a new permanent API token. Overwrites existing."""
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    new_token = f"jjinfit_sc_{secrets.token_urlsafe(32)}"
+    user.api_token = new_token
+    await db.commit()
+    await db.refresh(user)
+    
+    return {"api_token": new_token}
 
 
 @router.get("/me", response_model=UserOut)

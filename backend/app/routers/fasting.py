@@ -45,6 +45,32 @@ async def start_fasting(
     await db.refresh(record)
     return record
 
+@router.post("/end-active", response_model=FastingOut)
+async def end_active_fasting(
+    fasting_end: FastingEnd,
+    user_id: int = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """End the currently active fasting record. Useful for iOS Shortcuts."""
+    result = await db.execute(
+        select(FastingRecord)
+        .where(and_(FastingRecord.user_id == user_id, FastingRecord.end_time.is_(None)))
+        .order_by(FastingRecord.start_time.desc())
+    )
+    record = result.scalar_one_or_none()
+    
+    if not record:
+        raise HTTPException(status_code=404, detail="진행 중인 단식이 없습니다.")
+
+    record.end_time = fasting_end.end_time
+    delta = fasting_end.end_time - record.start_time
+    record.actual_hours = round(delta.total_seconds() / 3600, 2)
+    record.is_completed = record.actual_hours >= record.goal_hours
+
+    await db.commit()
+    await db.refresh(record)
+    return record
+
 
 @router.post("/{fasting_id}/end", response_model=FastingOut)
 async def end_fasting(

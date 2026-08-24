@@ -107,12 +107,15 @@ async def get_weekly_dashboard(
     if date_param is None:
         date_param = date.today()
 
+    from zoneinfo import ZoneInfo
+    kst = ZoneInfo("Asia/Seoul")
+
     # Calculate week boundaries (Monday to Sunday)
     week_start = date_param - timedelta(days=date_param.weekday())
     week_end = week_start + timedelta(days=6)
 
-    start_dt = datetime.combine(week_start, datetime.min.time())
-    end_dt = datetime.combine(week_end, datetime.max.time())
+    start_dt = datetime.combine(week_start, datetime.min.time(), tzinfo=kst)
+    end_dt = datetime.combine(week_end, datetime.max.time(), tzinfo=kst)
 
     # Fetch all data for the week
     meals_result = await db.execute(
@@ -189,8 +192,11 @@ async def get_monthly_dashboard(
     else:
         month_end = date(year, month + 1, 1) - timedelta(days=1)
 
-    start_dt = datetime.combine(month_start, datetime.min.time())
-    end_dt = datetime.combine(month_end, datetime.max.time())
+    from zoneinfo import ZoneInfo
+    kst = ZoneInfo("Asia/Seoul")
+
+    start_dt = datetime.combine(month_start, datetime.min.time(), tzinfo=kst)
+    end_dt = datetime.combine(month_end, datetime.max.time(), tzinfo=kst)
 
     # Get dates with data
     meal_dates = set()

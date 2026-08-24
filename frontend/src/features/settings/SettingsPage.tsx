@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { useTheme } from '../../hooks/useTheme';
 import { api } from '../../services/api';
@@ -25,6 +25,46 @@ export default function SettingsPage() {
   const [googleFitToken, setGoogleFitToken] = useState('');
   const [isGoogleTokenSaving, setIsGoogleTokenSaving] = useState(false);
   const [googleTokenMsg, setGoogleTokenMsg] = useState<string | null>(null);
+
+  // API Token State for iOS Shortcuts
+  const [apiToken, setApiToken] = useState<string | null>(null);
+  const [isApiTokenGenerating, setIsApiTokenGenerating] = useState(false);
+  const [apiTokenMsg, setApiTokenMsg] = useState<string | null>(null);
+
+  const fetchApiToken = async () => {
+    try {
+      const res = await api.get<{ api_token: string | null }>('/auth/api-token');
+      setApiToken(res.api_token);
+    } catch (err) {
+      console.error('Failed to fetch API token', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchApiToken();
+  }, []);
+
+  const handleGenerateApiToken = async () => {
+    if (apiToken && !window.confirm('새로운 토큰을 발급받으면 기존 단축어에 등록된 토큰은 작동하지 않습니다. 재발급 하시겠습니까?')) return;
+    try {
+      setIsApiTokenGenerating(true);
+      setApiTokenMsg(null);
+      const res = await api.post<{ api_token: string }>('/auth/api-token', {});
+      setApiToken(res.api_token);
+      setApiTokenMsg('✅ 새로운 단축어 연동용 API 토큰이 발급되었습니다!');
+    } catch (err: any) {
+      setApiTokenMsg('❌ 토큰 발급에 실패했습니다.');
+    } finally {
+      setIsApiTokenGenerating(false);
+    }
+  };
+
+  const handleCopyApiToken = () => {
+    if (apiToken) {
+      navigator.clipboard.writeText(apiToken);
+      setApiTokenMsg('📋 토큰이 클립보드에 복사되었습니다! 단축어 앱에 붙여넣기 하세요.');
+    }
+  };
 
   const handleSaveGoogleToken = async () => {
     if (!googleFitToken.trim()) return;
@@ -476,6 +516,65 @@ export default function SettingsPage() {
           {mergeResult && (
             <div style={{ marginTop: '12px', padding: '12px', background: mergeResult.startsWith('✅') ? 'rgba(59, 130, 246, 0.15)' : 'rgba(239, 68, 68, 0.15)', color: mergeResult.startsWith('✅') ? '#3b82f6' : 'var(--color-danger)', fontWeight: 700, borderRadius: 'var(--radius-md)', fontSize: '14px', whiteSpace: 'pre-line' }}>
               {mergeResult}
+            </div>
+          )}
+        </div>
+
+        {/* Shortcuts API Token Section */}
+        <div className="card settings-section" style={{ borderLeft: '4px solid #8B5CF6' }}>
+          <h3 className="section-title">⚡ iOS 단축어 (Shortcuts) 연동 API 토큰</h3>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '13.5px', lineHeight: 1.6, margin: '0 0 16px' }}>
+            아이폰 홈 화면에서 <strong>'단축어' 앱을 통해 버튼 한 번으로 찐fit 단식을 시작/종료</strong>할 수 있습니다.<br />
+            아래에서 영구 API 토큰을 발급받은 후 복사하여 단축어 설정 시 <code>X-API-Key</code> 헤더에 붙여넣어 주세요!
+          </p>
+
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+            <input
+              type="text"
+              value={apiToken || '아직 발급된 토큰이 없습니다.'}
+              readOnly
+              style={{
+                flex: 1, padding: '12px 14px', borderRadius: '10px',
+                border: '2px solid var(--border-color)', background: 'var(--bg-secondary)',
+                color: apiToken ? 'var(--text-primary)' : 'var(--text-tertiary)', fontSize: '14px', fontFamily: 'monospace',
+              }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={handleGenerateApiToken}
+              disabled={isApiTokenGenerating}
+              style={{ padding: '10px 16px', borderRadius: '8px', fontWeight: 700, fontSize: '13px' }}
+            >
+              {isApiTokenGenerating ? '발급 중...' : (apiToken ? '🔄 새 토큰으로 재발급' : '✨ API 토큰 생성하기')}
+            </button>
+            {apiToken && (
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={handleCopyApiToken}
+                style={{
+                  padding: '10px 16px', borderRadius: '8px',
+                  background: 'linear-gradient(135deg, #8B5CF6, #6D28D9)',
+                  border: 'none', color: '#fff', fontWeight: 700, fontSize: '13px', cursor: 'pointer'
+                }}
+              >
+                📋 토큰 복사하기
+              </button>
+            )}
+          </div>
+
+          {apiTokenMsg && (
+            <div style={{ 
+              marginTop: '12px', padding: '10px 14px', borderRadius: '8px', 
+              background: apiTokenMsg.startsWith('✅') || apiTokenMsg.startsWith('📋') ? 'rgba(139, 92, 246, 0.15)' : 'rgba(239, 68, 68, 0.15)', 
+              color: apiTokenMsg.startsWith('✅') || apiTokenMsg.startsWith('📋') ? '#8B5CF6' : '#EF4444',
+              fontSize: '13.5px', fontWeight: 600 
+            }}>
+              {apiTokenMsg}
             </div>
           )}
         </div>

@@ -25,3 +25,4 @@ class User(Base):
     )
     google_token_json: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     garmin_token_json: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    api_token: Mapped[Optional[str]] = mapped_column(String(255), unique=True, nullable=True)
