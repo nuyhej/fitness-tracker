@@ -4,8 +4,11 @@ const API_BASE = '/api';
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = localStorage.getItem('token');
 
+  const clientTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Seoul';
+
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
+    'X-Timezone': clientTimezone,
     ...((options.headers as Record<string, string>) || {}),
   };
 

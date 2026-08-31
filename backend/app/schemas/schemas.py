@@ -13,6 +13,7 @@ class UserOut(BaseModel):
     diet_start_date: Optional[date] = None
     fasting_goal_hours: int = 16
     theme_preference: str = "system"
+    timezone: str = "Asia/Seoul"
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -24,11 +25,12 @@ class UserProfileUpdate(BaseModel):
     fasting_goal_hours: Optional[int] = None
     theme_preference: Optional[str] = None
     avatar_url: Optional[str] = None
+    timezone: Optional[str] = None
 
 
 # --- Meal ---
 class MealCreate(BaseModel):
-    date: date
+    date: Optional[date] = None
     meal_type: str  # breakfast/lunch/snack/dinner
     description: str
     meal_time: Optional[str] = None  # HH:MM format
@@ -56,7 +58,7 @@ class MealOut(BaseModel):
 
 # --- Exercise ---
 class ExerciseCreate(BaseModel):
-    date: date
+    date: Optional[date] = None
     exercise_type: str  # fasted_cardio/weight/treadmill/outdoor_run/other
     duration_minutes: Optional[int] = None
     description: Optional[str] = None
@@ -83,7 +85,7 @@ class ExerciseOut(BaseModel):
 
 # --- InBody ---
 class InBodyCreate(BaseModel):
-    measured_at: datetime
+    measured_at: Optional[datetime] = None
     weight: float
     skeletal_muscle: Optional[float] = None
     body_fat_mass: Optional[float] = None
@@ -122,14 +124,14 @@ class InBodyTrendPoint(BaseModel):
 
 # --- Fasting ---
 class FastingStart(BaseModel):
-    start_time: datetime
+    start_time: Optional[datetime] = None
     end_time: Optional[datetime] = None
     goal_hours: Optional[int] = None  # Uses user's default if not provided
     note: Optional[str] = None
 
 
 class FastingEnd(BaseModel):
-    end_time: datetime
+    end_time: Optional[datetime] = None
 
 
 class FastingUpdate(BaseModel):
