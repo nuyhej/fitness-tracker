@@ -29,8 +29,18 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   }
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: 'Request failed' }));
-    throw new Error(error.detail || 'Request failed');
+    const errorData = await response.json().catch(() => null);
+    let msg = 'Request failed';
+    if (errorData) {
+      if (typeof errorData.detail === 'string') {
+        msg = errorData.detail;
+      } else if (Array.isArray(errorData.detail)) {
+        msg = errorData.detail.map((d: any) => d.msg || JSON.stringify(d)).join(', ');
+      } else if (errorData.message) {
+        msg = errorData.message;
+      }
+    }
+    throw new Error(msg);
   }
 
   if (response.status === 204) {
