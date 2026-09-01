@@ -1,5 +1,5 @@
 import { useState, Fragment } from 'react';
-import { WeeklyDashboard, DayData, MEAL_TYPE_LABELS, EXERCISE_TYPE_LABELS, MealRecord, ExerciseRecord, FastingOut, InBodyRecord } from '../../types';
+import { WeeklyDashboard, DayData, MEAL_TYPE_LABELS, EXERCISE_TYPE_LABELS, MealRecord, ExerciseRecord, FastingOut } from '../../types';
 import MealForm from '../Forms/MealForm';
 import ExerciseForm from '../Forms/ExerciseForm';
 import InBodyForm from '../Forms/InBodyForm';
@@ -26,7 +26,7 @@ interface WeeklyGridProps {
 export default function WeeklyGrid({ data, onDataChange }: WeeklyGridProps) {
   const [showMealForm, setShowMealForm] = useState<{ date: string; type: string; initialData?: MealRecord } | null>(null);
   const [showExerciseForm, setShowExerciseForm] = useState<{ date: string; initialData?: ExerciseRecord } | null>(null);
-  const [showInBodyForm, setShowInBodyForm] = useState<{ date: string; initialData?: InBodyRecord } | null>(null);
+  const [showInBodyForm, setShowInBodyForm] = useState<{ date: string } | null>(null);
   const [showFastingEditForm, setShowFastingEditForm] = useState<{ fastingData?: FastingOut, date?: string } | null>(null);
 
   const formatDate = (dateStr: string) => {
@@ -47,12 +47,7 @@ export default function WeeklyGrid({ data, onDataChange }: WeeklyGridProps) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', height: '100%', justifyContent: 'space-between', minHeight: '50px' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
               {day.inbody && (
-                <div 
-                  className="cell-inbody"
-                  style={{ cursor: 'pointer', transition: 'opacity 0.15s' }}
-                  onClick={() => setShowInBodyForm({ date: day.date, initialData: day.inbody! })}
-                  title="체중 기록 수정 / 삭제"
-                >
+                <div className="cell-inbody">
                   <span className="inbody-value">{day.inbody.weight}kg</span>
                   {day.inbody.skeletal_muscle && <span className="inbody-detail">근 {day.inbody.skeletal_muscle}</span>}
                   {day.inbody.body_fat_mass && <span className="inbody-detail">지 {day.inbody.body_fat_mass}</span>}
@@ -241,8 +236,7 @@ export default function WeeklyGrid({ data, onDataChange }: WeeklyGridProps) {
       {/* InBody / Weight Form Modal */}
       {showInBodyForm && (
         <InBodyForm 
-          date={showInBodyForm.date}
-          initialData={showInBodyForm.initialData}
+          date={showInBodyForm.date} 
           onClose={() => setShowInBodyForm(null)}
           onSuccess={() => { setShowInBodyForm(null); onDataChange(); }} 
         />

@@ -9,7 +9,6 @@ export interface User {
   diet_start_date?: string;
   fasting_goal_hours: number;
   theme_preference: 'light' | 'dark' | 'system';
-  timezone?: string;
   created_at: string;
 }
 

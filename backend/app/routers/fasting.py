@@ -1,13 +1,12 @@
 from datetime import date, datetime
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Header
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
 
 from app.core.database import get_db
 from app.core.security import get_current_user_id
-from app.core.timezone import resolve_request_tz, now_in_tz, to_local_naive_dt
 from app.models.fasting import FastingRecord
 from app.models.user import User
 from app.schemas.schemas import FastingStart, FastingEnd, FastingUpdate, FastingOut
@@ -18,41 +17,20 @@ router = APIRouter(prefix="/api/fasting", tags=["fasting"])
 @router.post("/start", response_model=FastingOut, status_code=201)
 async def start_fasting(
     fasting_in: FastingStart,
-    x_timezone: Optional[str] = Header(None, alias="X-Timezone"),
     user_id: int = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(select(User).where(User.id == user_id))
-    user = result.scalar_one()
-
-    # Determine user's local timezone
-    tz = resolve_request_tz(x_timezone, getattr(user, "timezone", "Asia/Seoul"))
-    goal_hours = fasting_in.goal_hours if fasting_in.goal_hours is not None else user.fasting_goal_hours
-
-    # Standardize start_time to local wall-clock time
-    if fasting_in.start_time:
-        start_time = to_local_naive_dt(fasting_in.start_time, tz)
-    else:
-        start_time = now_in_tz(tz).replace(tzinfo=None)
-
-    end_time = to_local_naive_dt(fasting_in.end_time, tz) if fasting_in.end_time else None
-
-    # 🔒 중복 방지: 이미 진행 중인 단식이 있으면 자동 종료 처리
-    existing_active = await db.execute(
-        select(FastingRecord).where(
-            and_(FastingRecord.user_id == user_id, FastingRecord.end_time.is_(None))
-        )
-    )
-    for active_record in existing_active.scalars().all():
-        active_record.end_time = start_time  # 새 단식 시작 시간으로 이전 단식 종료
-        delta = active_record.end_time - active_record.start_time
-        active_record.actual_hours = round(delta.total_seconds() / 3600, 2)
-        active_record.is_completed = active_record.actual_hours >= active_record.goal_hours
+    # Get user's default fasting goal if not provided
+    goal_hours = fasting_in.goal_hours
+    if goal_hours is None:
+        result = await db.execute(select(User).where(User.id == user_id))
+        user = result.scalar_one()
+        goal_hours = user.fasting_goal_hours
 
     record = FastingRecord(
         user_id=user_id,
-        start_time=start_time,
-        end_time=end_time,
+        start_time=fasting_in.start_time,
+        end_time=fasting_in.end_time,
         goal_hours=goal_hours,
         note=fasting_in.note,
     )
@@ -67,36 +45,25 @@ async def start_fasting(
     await db.refresh(record)
     return record
 
-
 @router.post("/end-active", response_model=FastingOut)
 async def end_active_fasting(
-    fasting_end: Optional[FastingEnd] = None,
-    x_timezone: Optional[str] = Header(None, alias="X-Timezone"),
+    fasting_end: FastingEnd,
     user_id: int = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ):
-    """End the currently active fasting record. Useful for iOS Shortcuts & Mobile."""
-    user_res = await db.execute(select(User).where(User.id == user_id))
-    user = user_res.scalar_one_or_none()
-    tz = resolve_request_tz(x_timezone, getattr(user, "timezone", "Asia/Seoul") if user else "Asia/Seoul")
-
+    """End the currently active fasting record. Useful for iOS Shortcuts."""
     result = await db.execute(
         select(FastingRecord)
         .where(and_(FastingRecord.user_id == user_id, FastingRecord.end_time.is_(None)))
         .order_by(FastingRecord.start_time.desc())
     )
-    record = result.scalars().first()
+    record = result.scalar_one_or_none()
     
     if not record:
         raise HTTPException(status_code=404, detail="진행 중인 단식이 없습니다.")
 
-    if fasting_end and fasting_end.end_time:
-        end_time = to_local_naive_dt(fasting_end.end_time, tz)
-    else:
-        end_time = now_in_tz(tz).replace(tzinfo=None)
-
-    record.end_time = end_time
-    delta = end_time - record.start_time
+    record.end_time = fasting_end.end_time
+    delta = fasting_end.end_time - record.start_time
     record.actual_hours = round(delta.total_seconds() / 3600, 2)
     record.is_completed = record.actual_hours >= record.goal_hours
 
@@ -108,15 +75,10 @@ async def end_active_fasting(
 @router.post("/{fasting_id}/end", response_model=FastingOut)
 async def end_fasting(
     fasting_id: int,
-    fasting_end: Optional[FastingEnd] = None,
-    x_timezone: Optional[str] = Header(None, alias="X-Timezone"),
+    fasting_end: FastingEnd,
     user_id: int = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ):
-    user_res = await db.execute(select(User).where(User.id == user_id))
-    user = user_res.scalar_one_or_none()
-    tz = resolve_request_tz(x_timezone, getattr(user, "timezone", "Asia/Seoul") if user else "Asia/Seoul")
-
     result = await db.execute(
         select(FastingRecord).where(
             and_(FastingRecord.id == fasting_id, FastingRecord.user_id == user_id)
@@ -126,13 +88,8 @@ async def end_fasting(
     if not record:
         raise HTTPException(status_code=404, detail="Fasting record not found")
 
-    if fasting_end and fasting_end.end_time:
-        end_time = to_local_naive_dt(fasting_end.end_time, tz)
-    else:
-        end_time = now_in_tz(tz).replace(tzinfo=None)
-
-    record.end_time = end_time
-    delta = end_time - record.start_time
+    record.end_time = fasting_end.end_time
+    delta = fasting_end.end_time - record.start_time
     record.actual_hours = round(delta.total_seconds() / 3600, 2)
     record.is_completed = record.actual_hours >= record.goal_hours
 
@@ -145,14 +102,9 @@ async def end_fasting(
 async def update_fasting(
     fasting_id: int,
     fasting_update: FastingUpdate,
-    x_timezone: Optional[str] = Header(None, alias="X-Timezone"),
     user_id: int = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ):
-    user_res = await db.execute(select(User).where(User.id == user_id))
-    user = user_res.scalar_one_or_none()
-    tz = resolve_request_tz(x_timezone, getattr(user, "timezone", "Asia/Seoul") if user else "Asia/Seoul")
-
     result = await db.execute(
         select(FastingRecord).where(
             and_(FastingRecord.id == fasting_id, FastingRecord.user_id == user_id)
@@ -163,9 +115,9 @@ async def update_fasting(
         raise HTTPException(status_code=404, detail="Fasting record not found")
 
     if fasting_update.start_time is not None:
-        record.start_time = to_local_naive_dt(fasting_update.start_time, tz)
+        record.start_time = fasting_update.start_time
     if fasting_update.end_time is not None:
-        record.end_time = to_local_naive_dt(fasting_update.end_time, tz)
+        record.end_time = fasting_update.end_time
     if fasting_update.goal_hours is not None:
         record.goal_hours = fasting_update.goal_hours
     if fasting_update.note is not None:
@@ -195,7 +147,7 @@ async def get_active_fasting(
         .where(and_(FastingRecord.user_id == user_id, FastingRecord.end_time.is_(None)))
         .order_by(FastingRecord.start_time.desc())
     )
-    record = result.scalars().first()
+    record = result.scalar_one_or_none()
     return record
 
 
