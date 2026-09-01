@@ -1,16 +1,13 @@
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import Optional
 import zoneinfo
 
-def _convert_to_naive_local(dt: datetime, tz_str: str) -> datetime:
-    if dt.tzinfo is not None:
-        try:
-            tz = zoneinfo.ZoneInfo(tz_str)
-            dt = dt.astimezone(tz)
-        except Exception:
-            pass
-        dt = dt.replace(tzinfo=None)
-    return dt
+def _ensure_aware_utc(dt: datetime, tz_str: str = None) -> datetime:
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -40,7 +37,7 @@ async def start_fasting(
     
     # Process timezone logic
     tz_str = fasting_in.timezone or "Asia/Seoul"
-    start_time = _convert_to_naive_local(fasting_in.start_time, tz_str)
+    start_time = _ensure_aware_utc(fasting_in.start_time, tz_str)
     
     if active_fasting:
         active_fasting.end_time = start_time
@@ -56,7 +53,7 @@ async def start_fasting(
         user = result.scalar_one()
         goal_hours = user.fasting_goal_hours
 
-    end_time = _convert_to_naive_local(fasting_in.end_time, tz_str) if fasting_in.end_time else None
+    end_time = _ensure_aware_utc(fasting_in.end_time, tz_str) if fasting_in.end_time else None
 
     record = FastingRecord(
         user_id=user_id,
@@ -94,8 +91,8 @@ async def end_active_fasting(
         raise HTTPException(status_code=404, detail="진행 중인 단식이 없습니다.")
 
     tz_str = fasting_end.timezone or "Asia/Seoul"
-    record.end_time = _convert_to_naive_local(fasting_end.end_time, tz_str)
-    delta = fasting_end.end_time - record.start_time
+    record.end_time = _ensure_aware_utc(fasting_end.end_time, tz_str)
+    delta = record.end_time - record.start_time
     record.actual_hours = round(delta.total_seconds() / 3600, 2)
     record.is_completed = record.actual_hours >= record.goal_hours
 
@@ -121,7 +118,7 @@ async def end_fasting(
         raise HTTPException(status_code=404, detail="Fasting record not found")
 
     tz_str = fasting_end.timezone or "Asia/Seoul"
-    record.end_time = _convert_to_naive_local(fasting_end.end_time, tz_str)
+    record.end_time = _ensure_aware_utc(fasting_end.end_time, tz_str)
     
     delta = record.end_time - record.start_time
     record.actual_hours = round(delta.total_seconds() / 3600, 2)
@@ -151,9 +148,9 @@ async def update_fasting(
     tz_str = getattr(fasting_update, "timezone", "Asia/Seoul")
 
     if fasting_update.start_time is not None:
-        record.start_time = _convert_to_naive_local(fasting_update.start_time, tz_str)
+        record.start_time = _ensure_aware_utc(fasting_update.start_time, tz_str)
     if fasting_update.end_time is not None:
-        record.end_time = _convert_to_naive_local(fasting_update.end_time, tz_str)
+        record.end_time = _ensure_aware_utc(fasting_update.end_time, tz_str)
     if fasting_update.goal_hours is not None:
         record.goal_hours = fasting_update.goal_hours
     if fasting_update.note is not None:
