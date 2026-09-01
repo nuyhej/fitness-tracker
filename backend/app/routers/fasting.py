@@ -37,6 +37,18 @@ async def start_fasting(
 
     end_time = to_local_naive_dt(fasting_in.end_time, tz) if fasting_in.end_time else None
 
+    # 🔒 중복 방지: 이미 진행 중인 단식이 있으면 자동 종료 처리
+    existing_active = await db.execute(
+        select(FastingRecord).where(
+            and_(FastingRecord.user_id == user_id, FastingRecord.end_time.is_(None))
+        )
+    )
+    for active_record in existing_active.scalars().all():
+        active_record.end_time = start_time  # 새 단식 시작 시간으로 이전 단식 종료
+        delta = active_record.end_time - active_record.start_time
+        active_record.actual_hours = round(delta.total_seconds() / 3600, 2)
+        active_record.is_completed = active_record.actual_hours >= active_record.goal_hours
+
     record = FastingRecord(
         user_id=user_id,
         start_time=start_time,
