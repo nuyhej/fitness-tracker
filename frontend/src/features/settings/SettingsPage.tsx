@@ -15,8 +15,6 @@ export default function SettingsPage() {
   
   const [fastingGoal, setFastingGoal] = useState(user?.fasting_goal_hours || 16);
   const [dietStart, setDietStart] = useState(user?.diet_start_date || '');
-  const detectedTz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Seoul';
-  const [userTimezone, setUserTimezone] = useState(user?.timezone || detectedTz);
   const [landingPage, setLandingPage] = useState(localStorage.getItem('default_landing') || '/overview');
   const [isSaving, setIsSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -131,7 +129,6 @@ export default function SettingsPage() {
         diet_start_date: dietStart || undefined,
         theme_preference: theme,
         avatar_url: avatarUrl,
-        timezone: userTimezone,
       });
       localStorage.setItem('default_landing', landingPage);
       setSuccessMsg('설정이 성공적으로 저장되었습니다!');
@@ -352,45 +349,6 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* Global Timezone Settings */}
-        <div className="card settings-section">
-          <h3 className="section-title">🌍 글로벌 타임존 & 현지 시각 설정</h3>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '13.5px', lineHeight: 1.6, margin: '0 0 14px' }}>
-            해외 여행이나 출장 시에도 <strong>현지 타임존에 맞추어 식단·운동·단식 기록이 정확한 날짜와 시간으로 동기화</strong>됩니다.
-          </p>
-          
-          <div className="form-group">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-              <label style={{ margin: 0 }}>현재 계정 타임존</label>
-              <span style={{ fontSize: '12px', padding: '3px 8px', borderRadius: '12px', background: 'rgba(0, 188, 212, 0.15)', color: 'var(--color-primary)', fontWeight: 600 }}>
-                📍 브라우저 자동 감지: {detectedTz}
-              </span>
-            </div>
-            
-            <select
-              className="input"
-              value={userTimezone}
-              onChange={(e) => setUserTimezone(e.target.value)}
-              style={{ background: 'var(--bg-input)', fontWeight: 'bold', fontSize: '14.5px' }}
-            >
-              <option value="Asia/Seoul">🇰🇷 대한민국 (서울 / KST, UTC+9)</option>
-              <option value="Asia/Tokyo">🇯🇵 일본 (도쿄 / JST, UTC+9)</option>
-              <option value="America/New_York">🇺🇸 미국 동부 (뉴욕 / EDT, UTC-4)</option>
-              <option value="America/Chicago">🇺🇸 미국 중부 (시카고 / CDT, UTC-5)</option>
-              <option value="America/Denver">🇺🇸 미국 산악 (덴버 / MDT, UTC-6)</option>
-              <option value="America/Los_Angeles">🇺🇸 미국 서부 (LA, 샌프란시스코 / PDT, UTC-7)</option>
-              <option value="Europe/London">🇬🇧 영국 (런던 / BST, UTC+1)</option>
-              <option value="Europe/Paris">🇫🇷 프랑스 (파리 / CEST, UTC+2)</option>
-              <option value="Asia/Singapore">🇸🇬 싱가포르 (SGT, UTC+8)</option>
-              <option value="Asia/Bangkok">🇹🇭 태국/베트남 (방콕 / ICT, UTC+7)</option>
-              <option value="Australia/Sydney">🇦🇺 호주 (시드니 / AEST, UTC+10)</option>
-              <option value="Pacific/Auckland">🇳🇿 뉴질랜드 (오클랜드 / NZST, UTC+12)</option>
-              <option value="UTC">🌐 협정 세계시 (UTC / GMT+0)</option>
-            </select>
-            <span className="help-text">단축어나 외부 기기에서 시간 정보를 보낼 때 해당 현지 표준시를 기준으로 일/주/월 캘린더가 매칭됩니다.</span>
-          </div>
-        </div>
-
         {/* External Sync Section */}
         <div className="card settings-section">
           <h3 className="section-title">📡 외부 기기 및 스마트 워치 연동 관리</h3>
@@ -564,21 +522,11 @@ export default function SettingsPage() {
 
         {/* Shortcuts API Token Section */}
         <div className="card settings-section" style={{ borderLeft: '4px solid #8B5CF6' }}>
-          <h3 className="section-title">⚡ iOS 단축어 (Shortcuts) 연동 API 토큰 & 초간편 설정</h3>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '13.5px', lineHeight: 1.6, margin: '0 0 14px' }}>
+          <h3 className="section-title">⚡ iOS 단축어 (Shortcuts) 연동 API 토큰</h3>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '13.5px', lineHeight: 1.6, margin: '0 0 16px' }}>
             아이폰 홈 화면에서 <strong>'단축어' 앱을 통해 버튼 한 번으로 찐fit 단식을 시작/종료</strong>할 수 있습니다.<br />
             아래에서 영구 API 토큰을 발급받은 후 복사하여 단축어 설정 시 <code>X-API-Key</code> 헤더에 붙여넣어 주세요!
           </p>
-
-          <div style={{ background: 'rgba(139, 92, 246, 0.08)', border: '1px solid rgba(139, 92, 246, 0.25)', borderRadius: '8px', padding: '12px 14px', marginBottom: '14px', fontSize: '13px', lineHeight: 1.6 }}>
-            <strong style={{ color: '#8B5CF6', display: 'block', marginBottom: '4px' }}>💡 [타임존 자동 보정 탑재] 단축어 설정 초간단 팁</strong>
-            <ul style={{ margin: 0, paddingLeft: '18px', color: 'var(--text-primary)' }}>
-              <li><strong>시간 본문(Body) 생략 가능:</strong> 단축어에서 날짜를 수동 변환할 필요 없이, 본문을 비우거나 <code>&#123;&#125;</code>만 전송해도 <strong>현재 계정 타임존(국내/해외 현지 시각)으로 100% 자동 기록</strong>됩니다!</li>
-              <li><strong>단식 시작 URL (POST):</strong> <code>https://서버주소/api/fasting/start</code></li>
-              <li><strong>단식 종료 URL (POST):</strong> <code>https://서버주소/api/fasting/end-active</code></li>
-              <li><strong>헤더 추가:</strong> <code>X-API-Key: 본인의_API_토큰</code></li>
-            </ul>
-          </div>
 
           <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
             <input
