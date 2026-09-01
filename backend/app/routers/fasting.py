@@ -120,8 +120,10 @@ async def end_fasting(
     if not record:
         raise HTTPException(status_code=404, detail="Fasting record not found")
 
-    record.end_time = fasting_end.end_time
-    delta = fasting_end.end_time - record.start_time
+    tz_str = fasting_end.timezone or "Asia/Seoul"
+    record.end_time = _convert_to_naive_local(fasting_end.end_time, tz_str)
+    
+    delta = record.end_time - record.start_time
     record.actual_hours = round(delta.total_seconds() / 3600, 2)
     record.is_completed = record.actual_hours >= record.goal_hours
 
@@ -146,10 +148,12 @@ async def update_fasting(
     if not record:
         raise HTTPException(status_code=404, detail="Fasting record not found")
 
+    tz_str = getattr(fasting_update, "timezone", "Asia/Seoul")
+
     if fasting_update.start_time is not None:
-        record.start_time = fasting_update.start_time
+        record.start_time = _convert_to_naive_local(fasting_update.start_time, tz_str)
     if fasting_update.end_time is not None:
-        record.end_time = fasting_update.end_time
+        record.end_time = _convert_to_naive_local(fasting_update.end_time, tz_str)
     if fasting_update.goal_hours is not None:
         record.goal_hours = fasting_update.goal_hours
     if fasting_update.note is not None:
