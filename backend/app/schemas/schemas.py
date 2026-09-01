@@ -126,10 +126,12 @@ class FastingStart(BaseModel):
     end_time: Optional[datetime] = None
     goal_hours: Optional[int] = None  # Uses user's default if not provided
     note: Optional[str] = None
+    timezone: Optional[str] = "Asia/Seoul"
 
 
 class FastingEnd(BaseModel):
     end_time: datetime
+    timezone: Optional[str] = "Asia/Seoul"
 
 
 class FastingUpdate(BaseModel):
