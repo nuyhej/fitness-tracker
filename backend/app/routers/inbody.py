@@ -150,7 +150,6 @@ async def get_inbody_trend(
 async def update_inbody(
     record_id: int,
     record_in: InBodyCreate,
-    x_timezone: Optional[str] = Header(None, alias="X-Timezone"),
     user_id: int = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ):
@@ -163,13 +162,9 @@ async def update_inbody(
     if not record:
         raise HTTPException(status_code=404, detail="InBody record not found")
 
-    user_res = await db.execute(select(User).where(User.id == user_id))
-    user = user_res.scalar_one_or_none()
-    tz = resolve_request_tz(x_timezone, getattr(user, "timezone", "Asia/Seoul") if user else "Asia/Seoul")
-
     record.weight = record_in.weight
     if record_in.measured_at:
-        record.measured_at = to_local_naive_dt(record_in.measured_at, tz)
+        record.measured_at = record_in.measured_at
     if record_in.skeletal_muscle is not None:
         record.skeletal_muscle = record_in.skeletal_muscle
     if record_in.body_fat_mass is not None:
