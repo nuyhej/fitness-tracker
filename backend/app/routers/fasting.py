@@ -41,7 +41,7 @@ async def start_fasting(
     
     if active_fasting:
         active_fasting.end_time = start_time
-        delta = active_fasting.end_time - active_fasting.start_time
+        delta = _ensure_aware_utc(active_fasting.end_time) - _ensure_aware_utc(active_fasting.start_time)
         active_fasting.actual_hours = round(delta.total_seconds() / 3600, 2)
         active_fasting.is_completed = active_fasting.actual_hours >= active_fasting.goal_hours
         db.add(active_fasting)
@@ -64,7 +64,7 @@ async def start_fasting(
     )
     
     if record.end_time:
-        delta = record.end_time - record.start_time
+        delta = _ensure_aware_utc(record.end_time) - _ensure_aware_utc(record.start_time)
         record.actual_hours = round(delta.total_seconds() / 3600, 2)
         record.is_completed = record.actual_hours >= record.goal_hours
     
@@ -92,7 +92,7 @@ async def end_active_fasting(
 
     tz_str = fasting_end.timezone or "Asia/Seoul"
     record.end_time = _ensure_aware_utc(fasting_end.end_time, tz_str)
-    delta = record.end_time - record.start_time
+    delta = _ensure_aware_utc(record.end_time) - _ensure_aware_utc(record.start_time)
     record.actual_hours = round(delta.total_seconds() / 3600, 2)
     record.is_completed = record.actual_hours >= record.goal_hours
 
@@ -120,7 +120,7 @@ async def end_fasting(
     tz_str = fasting_end.timezone or "Asia/Seoul"
     record.end_time = _ensure_aware_utc(fasting_end.end_time, tz_str)
     
-    delta = record.end_time - record.start_time
+    delta = _ensure_aware_utc(record.end_time) - _ensure_aware_utc(record.start_time)
     record.actual_hours = round(delta.total_seconds() / 3600, 2)
     record.is_completed = record.actual_hours >= record.goal_hours
 
@@ -158,7 +158,7 @@ async def update_fasting(
 
     # Recalculate actual_hours and completion status if end_time exists
     if record.end_time:
-        delta = record.end_time - record.start_time
+        delta = _ensure_aware_utc(record.end_time) - _ensure_aware_utc(record.start_time)
         record.actual_hours = round(delta.total_seconds() / 3600, 2)
         record.is_completed = record.actual_hours >= record.goal_hours
     else:
