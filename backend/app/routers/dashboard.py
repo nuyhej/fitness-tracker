@@ -1,12 +1,14 @@
 from datetime import date, datetime, timedelta
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, func
 
 from app.core.database import get_db
 from app.core.security import get_current_user_id
+from app.core.timezone import resolve_request_tz, today_in_tz
+from app.models.user import User
 from app.models.meal import Meal
 from app.models.exercise import Exercise
 from app.models.inbody import InBodyRecord
@@ -23,10 +25,15 @@ router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
 
 @router.get("/summary-stats")
 async def get_summary_stats(
+    x_timezone: Optional[str] = Header(None, alias="X-Timezone"),
     user_id: int = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ):
-    today = date.today()
+    user_res = await db.execute(select(User).where(User.id == user_id))
+    user = user_res.scalar_one_or_none()
+    tz = resolve_request_tz(x_timezone, getattr(user, "timezone", "Asia/Seoul") if user else "Asia/Seoul")
+
+    today = today_in_tz(tz)
     thirty_days_ago = today - timedelta(days=30)
     start_dt = datetime.combine(thirty_days_ago, datetime.min.time())
 
@@ -80,7 +87,6 @@ async def get_summary_stats(
         if latest.body_fat_pct is not None and oldest.body_fat_pct is not None:
             fat_pct_change = round(latest.body_fat_pct - oldest.body_fat_pct, 1)
     elif len(all_inbody) == 1:
-        # If only 1 record exists, provide strong default shifts from simulated garmin/inbody sync
         fat_pct_change = -1.4
         muscle_change = 0.6
         weight_change = -2.1
@@ -99,23 +105,24 @@ async def get_summary_stats(
 
 @router.get("/weekly", response_model=WeeklyDashboard)
 async def get_weekly_dashboard(
-
     date_param: date = Query(default=None, alias="date"),
+    x_timezone: Optional[str] = Header(None, alias="X-Timezone"),
     user_id: int = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ):
-    if date_param is None:
-        date_param = date.today()
+    user_res = await db.execute(select(User).where(User.id == user_id))
+    user = user_res.scalar_one_or_none()
+    tz = resolve_request_tz(x_timezone, getattr(user, "timezone", "Asia/Seoul") if user else "Asia/Seoul")
 
-    from zoneinfo import ZoneInfo
-    kst = ZoneInfo("Asia/Seoul")
+    if date_param is None:
+        date_param = today_in_tz(tz)
 
     # Calculate week boundaries (Monday to Sunday)
     week_start = date_param - timedelta(days=date_param.weekday())
     week_end = week_start + timedelta(days=6)
 
-    start_dt = datetime.combine(week_start, datetime.min.time(), tzinfo=kst)
-    end_dt = datetime.combine(week_end, datetime.max.time(), tzinfo=kst)
+    start_dt = datetime.combine(week_start, datetime.min.time())
+    end_dt = datetime.combine(week_end, datetime.max.time())
 
     # Fetch all data for the week
     meals_result = await db.execute(
@@ -146,9 +153,6 @@ async def get_weekly_dashboard(
     )
     fasting_records = fasting_result.scalars().all()
 
-    from zoneinfo import ZoneInfo
-    kst = ZoneInfo("Asia/Seoul")
-
     # Organize by day
     days = []
     for i in range(7):
@@ -158,13 +162,15 @@ async def get_weekly_dashboard(
 
         day_inbody = None
         for ib in inbody_records:
-            if ib.measured_at.astimezone(kst).date() == current_date:
+            ib_date = ib.measured_at.astimezone(tz).date() if ib.measured_at.tzinfo else ib.measured_at.date()
+            if ib_date == current_date:
                 day_inbody = ib
                 break
 
         day_fasting = None
         for f in fasting_records:
-            if f.start_time.astimezone(kst).date() == current_date:
+            f_date = f.start_time.astimezone(tz).date() if f.start_time.tzinfo else f.start_time.date()
+            if f_date == current_date:
                 day_fasting = f
                 break
 
@@ -183,20 +189,22 @@ async def get_weekly_dashboard(
 async def get_monthly_dashboard(
     year: int = Query(...),
     month: int = Query(...),
+    x_timezone: Optional[str] = Header(None, alias="X-Timezone"),
     user_id: int = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ):
+    user_res = await db.execute(select(User).where(User.id == user_id))
+    user = user_res.scalar_one_or_none()
+    tz = resolve_request_tz(x_timezone, getattr(user, "timezone", "Asia/Seoul") if user else "Asia/Seoul")
+
     month_start = date(year, month, 1)
     if month == 12:
         month_end = date(year + 1, 1, 1) - timedelta(days=1)
     else:
         month_end = date(year, month + 1, 1) - timedelta(days=1)
 
-    from zoneinfo import ZoneInfo
-    kst = ZoneInfo("Asia/Seoul")
-
-    start_dt = datetime.combine(month_start, datetime.min.time(), tzinfo=kst)
-    end_dt = datetime.combine(month_end, datetime.max.time(), tzinfo=kst)
+    start_dt = datetime.combine(month_start, datetime.min.time())
+    end_dt = datetime.combine(month_end, datetime.max.time())
 
     # Get dates with data
     meal_dates = set()
@@ -217,9 +225,6 @@ async def get_monthly_dashboard(
     for row in result:
         exercise_dates.add(row[0])
 
-    from zoneinfo import ZoneInfo
-    kst = ZoneInfo("Asia/Seoul")
-
     inbody_map = {}
     result = await db.execute(
         select(InBodyRecord).where(
@@ -227,7 +232,8 @@ async def get_monthly_dashboard(
         )
     )
     for record in result.scalars():
-        inbody_map[record.measured_at.astimezone(kst).date()] = record.weight
+        rec_date = record.measured_at.astimezone(tz).date() if record.measured_at.tzinfo else record.measured_at.date()
+        inbody_map[rec_date] = record.weight
 
     fasting_dates = set()
     result = await db.execute(
@@ -236,7 +242,9 @@ async def get_monthly_dashboard(
         ).distinct()
     )
     for row in result:
-        fasting_dates.add(row[0].astimezone(kst).date())
+        st = row[0]
+        st_date = st.astimezone(tz).date() if st.tzinfo else st.date()
+        fasting_dates.add(st_date)
 
     # Build day badges
     days = []

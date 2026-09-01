@@ -1,13 +1,15 @@
 from datetime import date
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Body
+from fastapi import APIRouter, Depends, HTTPException, Query, Body, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
 
 from app.core.database import get_db
 from app.core.security import get_current_user_id
+from app.core.timezone import resolve_request_tz, today_in_tz
 from app.models.exercise import Exercise
+from app.models.user import User
 from app.schemas.schemas import ExerciseCreate, ExerciseUpdate, ExerciseOut
 from app.services.garmin_service import sync_garmin_activities
 
@@ -31,14 +33,20 @@ async def sync_garmin(
 
 @router.post("", response_model=ExerciseOut, status_code=201)
 async def create_exercise(
-
     exercise_in: ExerciseCreate,
+    x_timezone: Optional[str] = Header(None, alias="X-Timezone"),
     user_id: int = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ):
+    user_res = await db.execute(select(User).where(User.id == user_id))
+    user = user_res.scalar_one_or_none()
+    tz = resolve_request_tz(x_timezone, getattr(user, "timezone", "Asia/Seoul") if user else "Asia/Seoul")
+
+    exercise_date = exercise_in.date if exercise_in.date else today_in_tz(tz)
+
     exercise = Exercise(
         user_id=user_id,
-        date=exercise_in.date,
+        date=exercise_date,
         exercise_type=exercise_in.exercise_type,
         duration_minutes=exercise_in.duration_minutes,
         description=exercise_in.description,

@@ -1,13 +1,15 @@
 from datetime import date, time
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
 
 from app.core.database import get_db
 from app.core.security import get_current_user_id
+from app.core.timezone import resolve_request_tz, today_in_tz
 from app.models.meal import Meal
+from app.models.user import User
 from app.schemas.schemas import MealCreate, MealUpdate, MealOut
 
 router = APIRouter(prefix="/api/meals", tags=["meals"])
@@ -16,17 +18,25 @@ router = APIRouter(prefix="/api/meals", tags=["meals"])
 @router.post("", response_model=MealOut, status_code=201)
 async def create_meal(
     meal_in: MealCreate,
+    x_timezone: Optional[str] = Header(None, alias="X-Timezone"),
     user_id: int = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ):
+    user_res = await db.execute(select(User).where(User.id == user_id))
+    user = user_res.scalar_one_or_none()
+    tz = resolve_request_tz(x_timezone, getattr(user, "timezone", "Asia/Seoul") if user else "Asia/Seoul")
+
+    meal_date = meal_in.date if meal_in.date else today_in_tz(tz)
+
     meal_time = None
     if meal_in.meal_time:
         parts = meal_in.meal_time.split(":")
-        meal_time = time(int(parts[0]), int(parts[1]))
+        if len(parts) >= 2:
+            meal_time = time(int(parts[0]), int(parts[1]))
 
     meal = Meal(
         user_id=user_id,
-        date=meal_in.date,
+        date=meal_date,
         meal_type=meal_in.meal_type,
         description=meal_in.description,
         meal_time=meal_time,

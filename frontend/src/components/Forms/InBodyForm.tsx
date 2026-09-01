@@ -1,16 +1,19 @@
 import { useState } from 'react';
 import { api } from '../../services/api';
+import { InBodyRecord } from '../../types';
 
 interface InBodyFormProps {
   date: string;
+  initialData?: InBodyRecord;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-export default function InBodyForm({ date, onClose, onSuccess }: InBodyFormProps) {
-  const [weight, setWeight] = useState('');
-  const [muscle, setMuscle] = useState('');
-  const [fat, setFat] = useState('');
+export default function InBodyForm({ date, initialData, onClose, onSuccess }: InBodyFormProps) {
+  const isEditMode = !!initialData;
+  const [weight, setWeight] = useState(initialData ? String(initialData.weight) : '');
+  const [muscle, setMuscle] = useState(initialData?.skeletal_muscle ? String(initialData.skeletal_muscle) : '');
+  const [fat, setFat] = useState(initialData?.body_fat_mass ? String(initialData.body_fat_mass) : '');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -21,13 +24,17 @@ export default function InBodyForm({ date, onClose, onSuccess }: InBodyFormProps
       setIsSubmitting(true);
       
       const payload = {
-        measured_at: `${date}T09:00:00Z`, // Default to 9am UTC
+        measured_at: `${date}T09:00:00Z`,
         weight: parseFloat(weight),
         skeletal_muscle: muscle ? parseFloat(muscle) : undefined,
         body_fat_mass: fat ? parseFloat(fat) : undefined,
       };
 
-      await api.post('/inbody', payload);
+      if (isEditMode && initialData) {
+        await api.put(`/inbody/${initialData.id}`, payload);
+      } else {
+        await api.post('/inbody', payload);
+      }
       onSuccess();
     } catch (err: any) {
       alert(err.message || '체중 기록 저장에 실패했습니다.');
@@ -36,15 +43,27 @@ export default function InBodyForm({ date, onClose, onSuccess }: InBodyFormProps
     }
   };
 
+  const handleDelete = async () => {
+    if (!initialData || !window.confirm('이 체중 기록을 정말 삭제하시겠습니까?')) return;
+    try {
+      setIsSubmitting(true);
+      await api.delete(`/inbody/${initialData.id}`);
+      onSuccess();
+    } catch (err: any) {
+      alert(err.message || '삭제에 실패했습니다.');
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="modal-overlay" onClick={onClose} style={{ zIndex: 9999 }}>
       <div className="modal-content glass-card" onClick={e => e.stopPropagation()} style={{ maxWidth: '350px' }}>
         <h2 style={{ fontSize: '18px', fontWeight: 800, margin: '0 0 16px', color: 'var(--text-primary)' }}>
-          ⚖️ 체중 수동 기록
+          ⚖️ 체중 {isEditMode ? '수정 / 삭제' : '수동 기록'}
         </h2>
         
         <p style={{ margin: '0 0 16px', fontSize: '13px', color: 'var(--text-secondary)' }}>
-          {date}의 체중과 체성분을 기록합니다.
+          {date}의 체중과 체성분을 {isEditMode ? '수정' : '기록'}합니다.
         </p>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -88,11 +107,25 @@ export default function InBodyForm({ date, onClose, onSuccess }: InBodyFormProps
             </div>
           </div>
 
-          <div className="modal-actions" style={{ marginTop: '8px' }}>
-            <button type="button" className="btn btn-secondary" onClick={onClose}>취소</button>
-            <button type="submit" className="btn btn-primary" disabled={!weight || isSubmitting}>
-              {isSubmitting ? '저장 중...' : '저장하기'}
-            </button>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
+            {isEditMode ? (
+              <button
+                type="button"
+                className="btn"
+                style={{ background: 'rgba(235, 77, 75, 0.2)', color: '#eb4d4b', border: '1px solid #eb4d4b' }}
+                onClick={handleDelete}
+                disabled={isSubmitting}
+              >
+                🗑️ 삭제
+              </button>
+            ) : <div />}
+            
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button type="button" className="btn btn-secondary" onClick={onClose}>취소</button>
+              <button type="submit" className="btn btn-primary" disabled={!weight || isSubmitting}>
+                {isSubmitting ? '저장 중...' : isEditMode ? '수정 저장' : '저장하기'}
+              </button>
+            </div>
           </div>
         </form>
       </div>

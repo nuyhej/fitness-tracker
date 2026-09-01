@@ -1,12 +1,13 @@
 from datetime import date, datetime
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Body
+from fastapi import APIRouter, Depends, HTTPException, Query, Body, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
 
 from app.core.database import get_db
 from app.core.security import get_current_user_id
+from app.core.timezone import resolve_request_tz, now_in_tz, to_local_naive_dt
 from app.models.inbody import InBodyRecord
 from app.models.user import User
 from app.services.sync_service import sync_user_health_data, sync_samsung_health_data
@@ -75,12 +76,22 @@ async def sync_samsung_data(
 @router.post("", response_model=InBodyOut, status_code=201)
 async def create_inbody(
     record_in: InBodyCreate,
+    x_timezone: Optional[str] = Header(None, alias="X-Timezone"),
     user_id: int = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ):
+    user_res = await db.execute(select(User).where(User.id == user_id))
+    user = user_res.scalar_one_or_none()
+    tz = resolve_request_tz(x_timezone, getattr(user, "timezone", "Asia/Seoul") if user else "Asia/Seoul")
+
+    if record_in.measured_at:
+        measured_at = to_local_naive_dt(record_in.measured_at, tz)
+    else:
+        measured_at = now_in_tz(tz).replace(tzinfo=None)
+
     record = InBodyRecord(
         user_id=user_id,
-        measured_at=record_in.measured_at,
+        measured_at=measured_at,
         weight=record_in.weight,
         skeletal_muscle=record_in.skeletal_muscle,
         body_fat_mass=record_in.body_fat_mass,
@@ -144,6 +155,44 @@ async def get_inbody_trend(
         )
         for r in records
     ]
+
+
+@router.put("/{record_id}", response_model=InBodyOut)
+async def update_inbody(
+    record_id: int,
+    record_in: InBodyCreate,
+    x_timezone: Optional[str] = Header(None, alias="X-Timezone"),
+    user_id: int = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(InBodyRecord).where(
+            and_(InBodyRecord.id == record_id, InBodyRecord.user_id == user_id)
+        )
+    )
+    record = result.scalar_one_or_none()
+    if not record:
+        raise HTTPException(status_code=404, detail="InBody record not found")
+
+    user_res = await db.execute(select(User).where(User.id == user_id))
+    user = user_res.scalar_one_or_none()
+    tz = resolve_request_tz(x_timezone, getattr(user, "timezone", "Asia/Seoul") if user else "Asia/Seoul")
+
+    record.weight = record_in.weight
+    if record_in.measured_at:
+        record.measured_at = to_local_naive_dt(record_in.measured_at, tz)
+    if record_in.skeletal_muscle is not None:
+        record.skeletal_muscle = record_in.skeletal_muscle
+    if record_in.body_fat_mass is not None:
+        record.body_fat_mass = record_in.body_fat_mass
+    if record_in.body_fat_pct is not None:
+        record.body_fat_pct = record_in.body_fat_pct
+    if record_in.bmi is not None:
+        record.bmi = record_in.bmi
+
+    await db.commit()
+    await db.refresh(record)
+    return record
 
 
 @router.delete("/{record_id}", status_code=204)

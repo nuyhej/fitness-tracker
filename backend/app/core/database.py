@@ -70,19 +70,28 @@ async def init_db():
             await conn.run_sync(Base.metadata.create_all)
             logger.info("[init_db] Tables created successfully!")
             
-            # Migrate existing columns that may be too small for PostgreSQL
+            # Migrate existing columns safely for SQLite and PostgreSQL
             from sqlalchemy import text
             migrations = [
                 "ALTER TABLE exercises ALTER COLUMN source TYPE VARCHAR(50);",
                 "ALTER TABLE inbody_records ALTER COLUMN skeletal_muscle DROP NOT NULL;",
                 "ALTER TABLE inbody_records ALTER COLUMN body_fat_mass DROP NOT NULL;",
-                "ALTER TABLE users ADD COLUMN api_token VARCHAR(255) UNIQUE;",
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS google_token_json TEXT;",
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS garmin_token_json TEXT;",
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS api_token VARCHAR(255);",
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS timezone VARCHAR(50) DEFAULT 'Asia/Seoul';",
+                # Fallback for SQLite which doesn't support IF NOT EXISTS in ADD COLUMN
+                "ALTER TABLE users ADD COLUMN google_token_json TEXT;",
+                "ALTER TABLE users ADD COLUMN garmin_token_json TEXT;",
+                "ALTER TABLE users ADD COLUMN api_token VARCHAR(255);",
+                "ALTER TABLE users ADD COLUMN timezone VARCHAR(50) DEFAULT 'Asia/Seoul';",
             ]
             for sql in migrations:
                 try:
-                    await conn.execute(text(sql))
+                    async with engine.begin() as migration_conn:
+                        await migration_conn.execute(text(sql))
                 except Exception:
-                    pass  # Column already correct size or table doesn't exist yet
+                    pass  # Column already exists or syntax not applicable
     except Exception as e:
         logger.error(f"[init_db] CRITICAL - Table creation FAILED: {e}")
         raise

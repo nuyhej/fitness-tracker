@@ -87,13 +87,42 @@ async def check_db_health():
 async def init_tables_manual():
     """Manually trigger table creation and show exact errors."""
     import traceback
-    from app.core.database import Base, engine as db_engine
+    from app.core.database import Base, engine as db_engine, init_db
     try:
-        async with db_engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-        return {"status": "ok", "message": "All tables created successfully!"}
+        await init_db()
+        return {"status": "ok", "message": "All tables created and migrated successfully!"}
     except Exception as e:
         return {"status": "error", "error": str(e), "trace": traceback.format_exc()}
+
+
+@app.get("/api/health/migrate")
+async def run_migrations_endpoint():
+    """Run all schema migrations explicitly and report status."""
+    import traceback
+    from sqlalchemy import text
+    from app.core.database import engine as db_engine
+    results = []
+    migrations = [
+        "ALTER TABLE exercises ALTER COLUMN source TYPE VARCHAR(50);",
+        "ALTER TABLE inbody_records ALTER COLUMN skeletal_muscle DROP NOT NULL;",
+        "ALTER TABLE inbody_records ALTER COLUMN body_fat_mass DROP NOT NULL;",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS google_token_json TEXT;",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS garmin_token_json TEXT;",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS api_token VARCHAR(255);",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS timezone VARCHAR(50) DEFAULT 'Asia/Seoul';",
+        "ALTER TABLE users ADD COLUMN google_token_json TEXT;",
+        "ALTER TABLE users ADD COLUMN garmin_token_json TEXT;",
+        "ALTER TABLE users ADD COLUMN api_token VARCHAR(255);",
+        "ALTER TABLE users ADD COLUMN timezone VARCHAR(50) DEFAULT 'Asia/Seoul';",
+    ]
+    for sql in migrations:
+        try:
+            async with db_engine.begin() as conn:
+                await conn.execute(text(sql))
+            results.append({"sql": sql, "status": "executed"})
+        except Exception as err:
+            results.append({"sql": sql, "status": f"skipped/error: {err}"})
+    return {"status": "ok", "results": results}
 
 @app.get("/api/health/login-test")
 async def login_test():
