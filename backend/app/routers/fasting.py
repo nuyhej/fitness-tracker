@@ -33,13 +33,13 @@ async def start_fasting(
         select(FastingRecord)
         .where(and_(FastingRecord.user_id == user_id, FastingRecord.end_time.is_(None)))
     )
-    active_fasting = active_fasting_res.scalar_one_or_none()
+    active_fastings = active_fasting_res.scalars().all()
     
     # Process timezone logic
     tz_str = fasting_in.timezone or "Asia/Seoul"
     start_time = _ensure_aware_utc(fasting_in.start_time, tz_str)
     
-    if active_fasting:
+    for active_fasting in active_fastings:
         active_fasting.end_time = start_time
         delta = _ensure_aware_utc(active_fasting.end_time) - _ensure_aware_utc(active_fasting.start_time)
         active_fasting.actual_hours = round(delta.total_seconds() / 3600, 2)
@@ -85,16 +85,21 @@ async def end_active_fasting(
         .where(and_(FastingRecord.user_id == user_id, FastingRecord.end_time.is_(None)))
         .order_by(FastingRecord.start_time.desc())
     )
-    record = result.scalar_one_or_none()
+    records = result.scalars().all()
     
-    if not record:
+    if not records:
         raise HTTPException(status_code=404, detail="진행 중인 단식이 없습니다.")
 
     tz_str = fasting_end.timezone or "Asia/Seoul"
-    record.end_time = _ensure_aware_utc(fasting_end.end_time, tz_str)
-    delta = _ensure_aware_utc(record.end_time) - _ensure_aware_utc(record.start_time)
-    record.actual_hours = round(delta.total_seconds() / 3600, 2)
-    record.is_completed = record.actual_hours >= record.goal_hours
+    
+    for record in records:
+        record.end_time = _ensure_aware_utc(fasting_end.end_time, tz_str)
+        delta = _ensure_aware_utc(record.end_time) - _ensure_aware_utc(record.start_time)
+        record.actual_hours = round(delta.total_seconds() / 3600, 2)
+        record.is_completed = record.actual_hours >= record.goal_hours
+        db.add(record)
+        
+    record = records[0] # Return the most recent one for response
 
     await db.commit()
     await db.refresh(record)
