@@ -157,6 +157,44 @@ async def get_inbody_trend(
     ]
 
 
+@router.put("/{record_id}", response_model=InBodyOut)
+async def update_inbody(
+    record_id: int,
+    record_in: InBodyCreate,
+    x_timezone: Optional[str] = Header(None, alias="X-Timezone"),
+    user_id: int = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(InBodyRecord).where(
+            and_(InBodyRecord.id == record_id, InBodyRecord.user_id == user_id)
+        )
+    )
+    record = result.scalar_one_or_none()
+    if not record:
+        raise HTTPException(status_code=404, detail="InBody record not found")
+
+    user_res = await db.execute(select(User).where(User.id == user_id))
+    user = user_res.scalar_one_or_none()
+    tz = resolve_request_tz(x_timezone, getattr(user, "timezone", "Asia/Seoul") if user else "Asia/Seoul")
+
+    record.weight = record_in.weight
+    if record_in.measured_at:
+        record.measured_at = to_local_naive_dt(record_in.measured_at, tz)
+    if record_in.skeletal_muscle is not None:
+        record.skeletal_muscle = record_in.skeletal_muscle
+    if record_in.body_fat_mass is not None:
+        record.body_fat_mass = record_in.body_fat_mass
+    if record_in.body_fat_pct is not None:
+        record.body_fat_pct = record_in.body_fat_pct
+    if record_in.bmi is not None:
+        record.bmi = record_in.bmi
+
+    await db.commit()
+    await db.refresh(record)
+    return record
+
+
 @router.delete("/{record_id}", status_code=204)
 async def delete_inbody(
     record_id: int,
